@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v77.33 (Click Game Area to Drop)
+// P5.js + Matter.js Plinko Game: "DROP" - v77.32 (Add Spacebar Drop & Admin Speed Toggle)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -62,7 +62,7 @@ const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lo
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V77.33"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V77.32"; // <<< VERSION number incremented >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
@@ -765,18 +765,10 @@ function mousePressed() {
 
         if (isFormVisible) {
             const rect = formElement.getBoundingClientRect();
-            // Check if click is within the *canvas boundaries* mapped to the form's *page coordinates*
-            // This requires getting canvas position relative to the viewport
-            const canvasRect = canvas.elt.getBoundingClientRect();
-            const mousePageX = canvasRect.left + mouseX;
-            const mousePageY = canvasRect.top + mouseY;
-
-            if (mousePageX >= rect.left && mousePageX <= rect.right &&
-                mousePageY >= rect.top && mousePageY <= rect.bottom) {
-                 // Click was inside the form's area on the page
-                return; // Let HTML handle the form interaction
+            if (mouseX >= rect.left && mouseX <= rect.right &&
+                mouseY >= rect.top && mouseY <= rect.bottom) {
+                return; // Click inside form, let HTML handle
             }
-             // If click is outside the form but still in game over state, let game over button checks run below
         }
 
         if (gameOverState === 'SHOWING_LEADERBOARD') {
@@ -786,7 +778,6 @@ function mousePressed() {
             let mouseCanvasX = mouseX;
             let mouseCanvasY = mouseY;
 
-            // Only check buttons if click is within the game area part of the canvas during game over
             if (mouseCanvasX >= 0 && mouseCanvasX <= gameAreaWidth && mouseCanvasY >= 0 && mouseCanvasY <= scaledCanvasHeight) {
                 if (mouseCanvasX > btnX && mouseCanvasX < btnX + btnW && mouseCanvasY > restartBtnY && mouseCanvasY < restartBtnY + btnH) {
                     hideLeaderboardForm(); startTransition('PLAYING', prepareGameForMode); return;
@@ -796,76 +787,58 @@ function mousePressed() {
                 }
             }
         }
-        // If form was visible but click was outside it, or if it wasn't visible,
-        // and the click wasn't on a game over button, do nothing further in GAME_OVER state.
-        return;
+        if (isFormVisible) return; // Click outside form, do nothing else
 
     } else if (gameState === 'PLAYING') {
-         // --- SETTINGS PANEL INTERACTIONS ---
-         if (mouseX >= menuStartX && mouseX < scaledCanvasWidth) {
-            // Check Sliders first
+         if (mouseX >= menuStartX && mouseX < scaledCanvasWidth) { // Settings Panel
             if (speedSlider && speedSlider.enabled && checkSliderInteraction(speedSlider, 'press')) return;
             if (betSlider && betSlider.enabled && checkSliderInteraction(betSlider, 'press')) return;
             if (ballSizeSlider && ballSizeSlider.enabled && checkSliderInteraction(ballSizeSlider, 'press')) return;
             if (sfxVolumeSlider && sfxVolumeSlider.enabled && checkSliderInteraction(sfxVolumeSlider, 'press')) return;
             if (musicVolumeSlider && musicVolumeSlider.enabled && checkSliderInteraction(musicVolumeSlider, 'press')) return;
 
-            // Check Settings Buttons
             let mouseXRelative = mouseX - menuStartX; let mouseYRelative = mouseY;
             let lastSliderBottomY = 60 * currentScale;
             let sliderToCheck = [musicVolumeSlider, sfxVolumeSlider, ballSizeSlider, betSlider, speedSlider];
             for(let slider of sliderToCheck) { if (slider && typeof slider.y === 'number') { lastSliderBottomY = slider.y + baseSliderOriginSpacing * currentScale; break; } }
             let buttonStartY = lastSliderBottomY; let buttonSpacing = buttonHeight + 15 * currentScale;
             let buttonX = (menuWidth - buttonWidth) / 2; let currentButtonY = buttonStartY;
-            // Trails Button
             if (mouseXRelative > buttonX && mouseXRelative < buttonX + buttonWidth && mouseYRelative > currentButtonY && mouseYRelative < currentButtonY + buttonHeight) { showTrails = !showTrails; return; }
             currentButtonY += buttonSpacing;
-            // Analyzer Button
             if (mouseXRelative > buttonX && mouseXRelative < buttonX + buttonWidth && mouseYRelative > currentButtonY && mouseYRelative < currentButtonY + buttonHeight) { showAnalyzer = !showAnalyzer; return; }
             currentButtonY += buttonSpacing;
-            // Change Mode Button
             if (mouseXRelative > buttonX && mouseXRelative < buttonX + buttonWidth && mouseYRelative > currentButtonY && mouseYRelative < currentButtonY + buttonHeight) { startTransition('LAUNCH_MENU', returnToLaunchMenuCleanup); return; }
-
-            // If click was in settings panel but didn't hit anything interactive, do nothing more.
-            return;
-
-        }
-        // --- GAME AREA INTERACTIONS (Drop Ball) ---
-        else if (mouseX >= 0 && mouseX < gameAreaWidth && mouseY >= 0 && mouseY <= scaledCanvasHeight) {
-            // Check if a drop is possible
-            let canDrop = (currentGameMode === 'SURVIVAL' && score >= betAmount) || (currentGameMode === 'HIGHSCORE' && ballsRemaining > 0);
-
-            if (canDrop) {
-                handleDrop(); // Trigger drop if click is anywhere in game area and conditions met
-                return; // Drop initiated, nothing else to do for this click
+        } else if (mouseX < gameAreaWidth) { // Game Area Drop Button Click
+            let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY;
+            let dropBtnW = buttonWidth; let dropBtnH = buttonHeight;
+            if (mouseX > dropBtnX && mouseX < dropBtnX + dropBtnW && mouseY > dropBtnY && mouseY < dropBtnY + dropBtnH) {
+                let canDrop = (currentGameMode === 'SURVIVAL' && score >= betAmount) || (currentGameMode === 'HIGHSCORE' && ballsRemaining > 0);
+                if (canDrop) {
+                    handleDrop();
+                 }
+                 return;
             }
-            // If cannot drop, do nothing (e.g., insufficient score/balls)
-            return;
         }
     }
-    // Clicks outside defined areas (or in handled states like LAUNCH_MENU handled by HTML buttons) will fall through here and do nothing.
 }
-
 
 function mouseDragged() {
      if (transitionState !== 'NONE') return;
      if (gameState === 'PLAYING' && mouseX >= menuStartX) {
-         // Only handle drags if they started on a slider (dragging flag is true)
-         if (speedSlider && speedSlider.enabled && speedSlider.dragging) checkSliderInteraction(speedSlider, 'drag');
-         if (betSlider && betSlider.enabled && betSlider.dragging) checkSliderInteraction(betSlider, 'drag');
-         if (ballSizeSlider && ballSizeSlider.enabled && ballSizeSlider.dragging) checkSliderInteraction(ballSizeSlider, 'drag');
-         if (sfxVolumeSlider && sfxVolumeSlider.enabled && sfxVolumeSlider.dragging) checkSliderInteraction(sfxVolumeSlider, 'drag');
-         if (musicVolumeSlider && musicVolumeSlider.enabled && musicVolumeSlider.dragging) checkSliderInteraction(musicVolumeSlider, 'drag');
+         if (speedSlider && speedSlider.enabled) checkSliderInteraction(speedSlider, 'drag');
+         if (betSlider && betSlider.enabled) checkSliderInteraction(betSlider, 'drag');
+         if (ballSizeSlider && ballSizeSlider.enabled) checkSliderInteraction(ballSizeSlider, 'drag');
+         if (sfxVolumeSlider && sfxVolumeSlider.enabled) checkSliderInteraction(sfxVolumeSlider, 'drag');
+         if (musicVolumeSlider && musicVolumeSlider.enabled) checkSliderInteraction(musicVolumeSlider, 'drag');
      }
 }
 
 function mouseReleased() {
-    // Ensure dragging flag is reset for all sliders on release, regardless of where release happens
-     if (speedSlider) checkSliderInteraction(speedSlider, 'release');
-     if (betSlider) checkSliderInteraction(betSlider, 'release');
-     if (ballSizeSlider) checkSliderInteraction(ballSizeSlider, 'release');
-     if (sfxVolumeSlider) checkSliderInteraction(sfxVolumeSlider, 'release');
-     if (musicVolumeSlider) checkSliderInteraction(musicVolumeSlider, 'release');
+     checkSliderInteraction(speedSlider, 'release');
+     checkSliderInteraction(betSlider, 'release');
+     checkSliderInteraction(ballSizeSlider, 'release');
+     checkSliderInteraction(sfxVolumeSlider, 'release');
+     checkSliderInteraction(musicVolumeSlider, 'release');
 }
 
 function keyPressed() {
@@ -896,37 +869,24 @@ function keyPressed() {
 
 function checkSliderInteraction(slider, eventType) {
      if (!slider) return false;
-     // Allow release event even if slider is disabled (to stop dragging)
      if (eventType !== 'release' && slider.enabled !== undefined && !slider.enabled) {
          return false;
      }
-
      let sliderXRelativeInPanel = slider.x;
      let trackStartXAbsolute = menuStartX + sliderXRelativeInPanel;
      let trackEndXAbsolute = trackStartXAbsolute + sliderWidth;
      let trackYAbsolute = slider.y + 25 * currentScale;
      let handleXAbsolute = map(slider.value, slider.minVal, slider.maxVal, trackStartXAbsolute, trackEndXAbsolute);
      handleXAbsolute = constrain(handleXAbsolute, trackStartXAbsolute, trackEndXAbsolute);
-
      let mouseXCanvas = mouseX;
      let mouseYCanvas = mouseY;
-
+     let distToHandle = dist(mouseXCanvas, mouseYCanvas, handleXAbsolute, trackYAbsolute);
      let interactionOccurred = false;
-
      if (eventType === 'press') {
-         // Check if click is within the slider's interactive vertical area AND within the menu panel horizontally
-         if (mouseXCanvas >= menuStartX && mouseXCanvas < scaledCanvasWidth &&
-             mouseYCanvas > slider.y && mouseYCanvas < slider.y + 50 * currentScale) { // Increased vertical tolerance a bit
-
-             let distToHandle = dist(mouseXCanvas, mouseYCanvas, handleXAbsolute, trackYAbsolute);
-             let distToTrackY = abs(mouseYCanvas - trackYAbsolute);
-             let clickOnHandle = distToHandle < sliderHandleSize * 1.5; // Generous handle click area
-             let clickOnTrack = mouseXCanvas >= trackStartXAbsolute && mouseXCanvas <= trackEndXAbsolute && distToTrackY < sliderHandleSize * 1.5; // Click near track Y
-
-             if (clickOnHandle || clickOnTrack) {
+         if (mouseXCanvas >= menuStartX && mouseXCanvas < scaledCanvasWidth && mouseYCanvas > slider.y && mouseYCanvas < slider.y + 50 * currentScale) {
+             if (distToHandle < sliderHandleSize * 1.5 || (mouseXCanvas >= trackStartXAbsolute && mouseXCanvas <= trackEndXAbsolute && abs(mouseYCanvas - trackYAbsolute) < sliderHandleSize * 1.5)) {
                  slider.dragging = true;
-                 // Update value immediately based on click position on track
-                 let mouseXRelativeToTrack = constrain(mouseXCanvas - trackStartXAbsolute, 0, sliderWidth);
+                 let mouseXRelativeToTrack = mouseXCanvas - trackStartXAbsolute;
                  let newValue = map(mouseXRelativeToTrack, 0, sliderWidth, slider.minVal, slider.maxVal);
                  newValue = constrain(newValue, slider.minVal, slider.maxVal);
                  updateSliderValue(slider, newValue);
@@ -935,25 +895,22 @@ function checkSliderInteraction(slider, eventType) {
          }
      } else if (eventType === 'drag') {
          if (slider.dragging) {
-             // Only drag if mouse is still within the menu panel horizontally (prevents dragging from off-panel)
-             if (mouseXCanvas >= menuStartX && mouseXCanvas < scaledCanvasWidth) {
-                let mouseXRelativeToTrack = constrain(mouseXCanvas - trackStartXAbsolute, 0, sliderWidth);
-                let newValue = map(mouseXRelativeToTrack, 0, sliderWidth, slider.minVal, slider.maxVal);
-                newValue = constrain(newValue, slider.minVal, slider.maxVal);
-                updateSliderValue(slider, newValue);
-             }
-             interactionOccurred = true; // Still considered dragging even if mouse moves outside panel vertically/horizontally
+             let mouseXRelativeToTrack = mouseXCanvas - trackStartXAbsolute;
+             let newValue = map(mouseXRelativeToTrack, 0, sliderWidth, slider.minVal, slider.maxVal);
+             newValue = constrain(newValue, slider.minVal, slider.maxVal);
+             updateSliderValue(slider, newValue);
+             interactionOccurred = true;
          }
      } else if (eventType === 'release') {
          if (slider.dragging) {
-             interactionOccurred = true; // Register that a drag operation ended
+             interactionOccurred = true;
          }
-         slider.dragging = false; // Always reset dragging state on release
+         slider.dragging = false;
      }
      return interactionOccurred;
 }
 
-function updateSliderValue(slider, newValue) { if (slider === speedSlider) { slider.value = newValue; gravityScale = map(slider.value, minSpeedSliderDisplayValue, maxSpeedSliderDisplayValue, minActualGravity, maxActualGravity); if (engine) engine.world.gravity.y = gravityScale; } else if (slider === betSlider) { slider.value = floor(newValue); betAmount = slider.value; } else if (slider === ballSizeSlider) { slider.value = floor(newValue); currentBallRadius = slider.value; } else if (slider === sfxVolumeSlider) { slider.value = newValue; sfxVolume = slider.value; if (blopSound?.isLoaded()) blopSound.setVolume(sfxVolume); if (bonusSound?.isLoaded()) bonusSound.setVolume(sfxVolume); } else if (slider === musicVolumeSlider) { slider.value = floor(newValue); let actualVolume = map(slider.value, 0, 100, 0.0, 1.0); musicVolume = actualVolume; if (backgroundMusic?.isLoaded()) { backgroundMusic.setVolume(actualVolume); if (actualVolume > 0.01 && !backgroundMusic.isPlaying() && audioStarted) { try { backgroundMusic.loop(); } catch(e){ console.error("Error looping music in slider update:", e);}} else if (actualVolume <= 0.01 && backgroundMusic.isPlaying()) { backgroundMusic.stop(); } } } }
+function updateSliderValue(slider, newValue) { if (slider === speedSlider) { slider.value = newValue; gravityScale = map(slider.value, minSpeedSliderDisplayValue, maxSpeedSliderDisplayValue, minActualGravity, maxActualGravity); if (engine) engine.world.gravity.y = gravityScale; } else if (slider === betSlider) { slider.value = floor(newValue); betAmount = slider.value; } else if (slider === ballSizeSlider) { slider.value = floor(newValue); currentBallRadius = slider.value; } else if (slider === sfxVolumeSlider) { slider.value = newValue; sfxVolume = slider.value; if (blopSound?.isLoaded()) blopSound.setVolume(sfxVolume); if (bonusSound?.isLoaded()) bonusSound.setVolume(sfxVolume); } else if (slider === musicVolumeSlider) { slider.value = floor(newValue); let actualVolume = map(slider.value, 0, 100, 0.0, 1.0); musicVolume = actualVolume; if (backgroundMusic?.isLoaded()) { backgroundMusic.setVolume(actualVolume); if (actualVolume > 0.01 && !backgroundMusic.isPlaying() && audioStarted) { backgroundMusic.loop(); } else if (actualVolume <= 0.01 && backgroundMusic.isPlaying()) { backgroundMusic.stop(); } } } }
 
 // --- Game Logic ---
 function activateDoubleDrop() { if (currentGameMode !== 'SURVIVAL' || isDoubleDropActive) return; isDoubleDropActive = true; doubleDropTimer = doubleDropDuration; doubleDropMessage = "DOUBLE DROP!"; doubleDropMessageTimer = powerupMessageDuration; if (bonusSound?.isLoaded()) { bonusSound.play(); } }
@@ -962,50 +919,53 @@ function handleDrop() {
      // Extra check to ensure we're not dropping during transitions etc.
     if (gameState !== 'PLAYING' || transitionState !== 'NONE') return;
 
-    // Determine if a drop is possible (re-checking here is safest)
-    let canDrop = (currentGameMode === 'SURVIVAL' && score >= betAmount) || (currentGameMode === 'HIGHSCORE' && ballsRemaining > 0);
-
-    if (!canDrop) {
-        if (DEBUG_MODE) console.log("Drop prevented: Cannot drop (final check).");
-        return; // Exit if conditions aren't met
-    }
-
+    // Determine if a drop is possible (already checked by caller - mousePressed/keyPressed)
     if (currentGameMode === 'SURVIVAL') {
-        score -= betAmount; // Deduct cost
-        let startX = markerX + random(-1 * currentScale, 1 * currentScale);
-        let startY = markerY;
-        createPhysicsBall(startX, startY);
+        let cost = betAmount;
+        // Final check for score just in case
+        if (score >= cost) {
+            score -= cost;
+            let startX = markerX + random(-1 * currentScale, 1 * currentScale);
+            let startY = markerY;
+            createPhysicsBall(startX, startY);
 
-        // Bonus Ball / Power-up Chances
-        if (random() < bonusBallChance) {
-            bonusBallMessage = "EXTRA BALL!";
-            bonusBallTimer = bonusBallDuration;
-            setTimeout(() => {
-                if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
-                let bonusStartX = markerX + random(-1 * currentScale, 1 * currentScale);
-                let bonusStartY = markerY;
-                createPhysicsBall(bonusStartX, bonusStartY);
-            }, dropDelay / 2);
+            // Bonus Ball / Power-up Chances
+            if (random() < bonusBallChance) {
+                bonusBallMessage = "EXTRA BALL!";
+                bonusBallTimer = bonusBallDuration;
+                setTimeout(() => {
+                    if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
+                    let bonusStartX = markerX + random(-1 * currentScale, 1 * currentScale);
+                    let bonusStartY = markerY;
+                    createPhysicsBall(bonusStartX, bonusStartY);
+                }, dropDelay / 2);
+            }
+            let betRange = maxBetAmount - minBetAmount;
+            let betRatio = (betRange > 0) ? constrain((betAmount - minBetAmount) / betRange, 0, 1) : 0;
+            let oddsMultiplier = 1 + powerupBetScalingFactor * betRatio;
+            if (!isDoubleDropActive && random() < doubleDropChance * oddsMultiplier) activateDoubleDrop();
+            if (!isDoubleMultiplierActive && random() < doubleMultiplierChance * oddsMultiplier) activateDoubleMultiplier();
+            if (isDoubleDropActive) {
+                setTimeout(() => {
+                    if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
+                    let extraStartX = markerX + random(-1 * currentScale, 1 * currentScale);
+                    let extraStartY = markerY;
+                    createPhysicsBall(extraStartX, extraStartY);
+                }, dropDelay / 3);
+            }
+        } else {
+            if (DEBUG_MODE) console.log("Drop prevented: Insufficient points (final check).");
         }
-        let betRange = maxBetAmount - minBetAmount;
-        let betRatio = (betRange > 0) ? constrain((betAmount - minBetAmount) / betRange, 0, 1) : 0;
-        let oddsMultiplier = 1 + powerupBetScalingFactor * betRatio;
-        if (!isDoubleDropActive && random() < doubleDropChance * oddsMultiplier) activateDoubleDrop();
-        if (!isDoubleMultiplierActive && random() < doubleMultiplierChance * oddsMultiplier) activateDoubleMultiplier();
-        if (isDoubleDropActive) {
-            setTimeout(() => {
-                if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
-                let extraStartX = markerX + random(-1 * currentScale, 1 * currentScale);
-                let extraStartY = markerY;
-                createPhysicsBall(extraStartX, extraStartY);
-            }, dropDelay / 3);
-        }
-
     } else if (currentGameMode === 'HIGHSCORE') {
-        ballsRemaining--; // Decrement balls
-        let startX = markerX + random(-1 * currentScale, 1 * currentScale);
-        let startY = markerY;
-        createPhysicsBall(startX, startY);
+        // Final check for balls remaining
+        if (ballsRemaining > 0) {
+            ballsRemaining--;
+            let startX = markerX + random(-1 * currentScale, 1 * currentScale);
+            let startY = markerY;
+            createPhysicsBall(startX, startY);
+        } else {
+            if (DEBUG_MODE) console.log("Drop prevented: Out of balls (final check).");
+        }
     }
 }
 
@@ -1087,7 +1047,7 @@ function resetGame() {
         survivalStartTime = millis(); lastDecayTime = survivalStartTime;
         currentDecayPercent = survivalInitialDecayPercent; nextDecayTime = survivalStartTime + survivalDecayStartDelay;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = true; }
-        if (speedSlider) speedSlider.enabled = true; // V77.33 - Keep enabled unless admin toggles it
+        if (speedSlider) speedSlider.enabled = false; // Disable speed slider in Survival
         ballsRemaining = Infinity;
     } else if (currentGameMode === 'HIGHSCORE') {
         score = 0; ballsRemaining = highScoreBallsTotal; betAmount = minBetAmount;
