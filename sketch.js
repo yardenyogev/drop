@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v77.32 (Add Spacebar Drop & Admin Speed Toggle)
+// P5.js + Matter.js Plinko Game: "DROP" - v77.34 (Revert Specific 'Gold' to 'Points' & Increment Version)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -56,13 +56,13 @@ const survivalDecayStartDelay = 30000;
 const survivalDecayInterval = 30000;
 const survivalInitialDecayPercent = 0.10; const survivalDecayIncrement = 0.10;
 const survivalMaxDecayPercent = 1.0; // V77.20
-const pointsLossWarningStartTime = 5; const pointsLossFlashDurationFrames = 15;
+const pointsLossWarningStartTime = 5; const pointsLossFlashDurationFrames = 15; // Renamed internally but keeps name here for clarity
 const lossCountdownTextSizeBase = 65; const lossCountdownPulseScale = 1.15;
 const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lossMessageDuration = 90; const lossMessageGlowBlur = 15;
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V77.32"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V77.34"; // <<< VERSION number incremented >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
@@ -81,17 +81,20 @@ const baseLeaderboardEntrySpacing = 5;
 
 
 // Global Variables
-let currentScale = 1; let scaledCanvasWidth, scaledCanvasHeight; let gameAreaWidth, menuWidth, menuStartX; let lastPegRowY; let slotStartY; let score = 0; let sessionScore = 0; let gameState = 'LAUNCH_MENU'; let currentGameMode = null; let betAmount = minBetAmount; let gravityScale = defaultActualGravity; let currentBallRadius = baseBallRadius; let titleFont, uiFont, slotFont; let titleY, titleSize; let uiSideMargin, uiScoreTextSize; let buttonTextSize, buttonWidth, buttonHeight; let slotTextSize; let scoreY; let speedSlider, amountSlider, betSlider, ballSizeSlider, sfxVolumeSlider, musicVolumeSlider; let sliderWidth, sliderHandleSize; let bounceAmplitude; let recentHits = []; let multiplierPanelX, multiplierPanelY, multiplierPanelWidth, multiplierPanelHeight, multiplierPanelItemHeight, multiplierPanelItemSpacing, multiplierPanelTextSize, multiplierPanelBorderRadius; let timerTextSize; let powerupTimerDisplayX; let powerupTimerDisplayY; let oddsDisplayYLine1, oddsDisplayYLine2, oddsDisplayTextSize, oddsLineSpacing;
+let currentScale = 1; let scaledCanvasWidth, scaledCanvasHeight; let gameAreaWidth, menuWidth, menuStartX; let lastPegRowY; let slotStartY; let score = 0; // Represents Gold amount
+let sessionScore = 0; // Represents total Points earned in Survival
+let gameState = 'LAUNCH_MENU'; let currentGameMode = null; let betAmount = minBetAmount; let gravityScale = defaultActualGravity; let currentBallRadius = baseBallRadius; let titleFont, uiFont, slotFont; let titleY, titleSize; let uiSideMargin, uiScoreTextSize; let buttonTextSize, buttonWidth, buttonHeight; let slotTextSize; let scoreY; let speedSlider, amountSlider, betSlider, ballSizeSlider, sfxVolumeSlider, musicVolumeSlider; let sliderWidth, sliderHandleSize; let bounceAmplitude; let recentHits = []; let multiplierPanelX, multiplierPanelY, multiplierPanelWidth, multiplierPanelHeight, multiplierPanelItemHeight, multiplierPanelItemSpacing, multiplierPanelTextSize, multiplierPanelBorderRadius; let timerTextSize; let powerupTimerDisplayX; let powerupTimerDisplayY; let oddsDisplayYLine1, oddsDisplayYLine2, oddsDisplayTextSize, oddsLineSpacing;
 let creatorTextY1, creatorTextY2, creatorTextSize;
 let versionTextY, versionTextSize;
 let dropButtonY;
 let bonusBallMessage = '', bonusBallTimer = 0; let isDoubleDropActive = false, doubleDropTimer = 0; let isDoubleMultiplierActive = false, doubleMultiplierTimer = 0; let doubleDropMessage = '', doubleDropMessageTimer = 0; let doubleMultiplierMessage = '', doubleMultiplierMessageTimer = 0; let showTrails = false; let showAnalyzer = true; let blopSound, bonusSound, backgroundMusic; let sfxVolume = defaultSfxVolume;
 let musicVolume = defaultMusicVolume;
 let audioStarted = false;
-let isGameOverConditionMet = false; let pointsLossFlashActive = false; let pointsLossFlashEndFrame = 0; let markerX, markerY, markerMinX, markerMaxX, markerSpeed, markerDirection = 1, markerSize; let ballsRemaining = 0; let highScoreEnded = false;
+let isGameOverConditionMet = false; let goldLossFlashActive = false; let goldLossFlashEndFrame = 0;
+let markerX, markerY, markerMinX, markerMaxX, markerSpeed, markerDirection = 1, markerSize; let ballsRemaining = 0; let highScoreEnded = false;
 let survivalStartTime = 0; let lastDecayTime = 0; let currentDecayPercent = 0; let nextDecayTime = Infinity;
-let isPointsLossCountdownActive = false; let pointsLossCountdownValue = 0; let pointsLossCountdownAnimProgress = 0;
-let pointsLossMessageActive = false; let pointsLossMessageProgress = 0; let pointsLostAmountForDisplay = 0;
+let isGoldLossCountdownActive = false; let goldLossCountdownValue = 0; let goldLossCountdownAnimProgress = 0;
+let goldLossMessageActive = false; let goldLossMessageProgress = 0; let goldLostAmountForDisplay = 0;
 let launchMenuDiv; let survivalButton, highScoreButton; let menuAlpha = 0; let parallaxLayers = []; let menuParticles = []; let menuFallingBalls = [];
 let transitionState = 'NONE'; let transitionProgress = 0; let transitionTargetState = ''; let transitionCallback = null;
 
@@ -364,11 +367,11 @@ function draw() {
 
 // ============================ drawCurrentState() ============================
 function drawCurrentState() {
-    if (pointsLossFlashActive && frameCount > pointsLossFlashEndFrame) {
-        pointsLossFlashActive = false;
+    if (goldLossFlashActive && frameCount > goldLossFlashEndFrame) {
+        goldLossFlashActive = false;
     }
     if (gameState === 'PLAYING' && currentGameMode === 'SURVIVAL') {
-        updatePointsLossVisuals();
+        updateGoldLossVisuals();
     }
 
     if (gameState === 'LAUNCH_MENU') {
@@ -418,7 +421,7 @@ function drawCurrentState() {
         push(); drawMarker(); pop(); if (showAnalyzer) { push(); drawStatisticsBars(); pop(); }
         drawTitle(); // Draw game title
         drawGameUI();
-        drawPointsLossVisuals();
+        drawGoldLossVisuals();
         pop(); // End Game area isolation
 
         push(); // Settings panel isolation
@@ -465,16 +468,17 @@ function drawCurrentState() {
     // Game Over Condition Checking
     if (gameState === 'PLAYING' && !isGameOverConditionMet) {
         if (currentGameMode === 'HIGHSCORE' && ballsRemaining <= 0 && balls.length === 0) { isGameOverConditionMet = true; highScoreEnded = true; }
-        else if (currentGameMode === 'SURVIVAL' && score < minBetAmount && balls.length === 0) { isGameOverConditionMet = true; }
+        else if (currentGameMode === 'SURVIVAL' && score < minBetAmount && balls.length === 0) { isGameOverConditionMet = true; } // Check if enough Gold for minimum bet
         else if (currentGameMode === 'SURVIVAL' && score <= 0 && balls.length === 0 ) { isGameOverConditionMet = true; }
     }
     // Transition TO GAME_OVER state
     if (isGameOverConditionMet && balls.length === 0 && gameState === 'PLAYING') {
-        if (score < 0) score = 0; // Ensure score isn't negative
+        if (score < 0) score = 0; // Ensure gold isn't negative
         startTransition('GAME_OVER', () => {
              gameState = 'GAME_OVER';
              gameOverState = 'SHOWING_FORM';
              leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
+             // Submit 'sessionScore' (total points earned) for Survival, 'score' (final gold) for High Score
              let scoreToSubmit = (currentGameMode === 'HIGHSCORE') ? score : sessionScore;
              const form = document.getElementById('leaderboard-form');
              if(form) {
@@ -583,9 +587,66 @@ function drawSlots() { push(); const scaledSlotTextSize = max(6, baseSlotTextSiz
 function drawTitle() { push(); textFont(titleFont); textSize(titleSize); textAlign(CENTER, TOP); let titleText = "DROP"; let x = gameAreaWidth / 2; let y = titleY; let offset = titleSize * 0.03; fill(titleColorShadow[0], titleColorShadow[1], titleColorShadow[2], 180); text(titleText, x + offset, y + offset); let grad = drawingContext.createLinearGradient(x - titleSize, y, x + titleSize, y + titleSize); grad.addColorStop(0, `rgb(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]})`); grad.addColorStop(0.5, `rgb(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]})`); grad.addColorStop(1, `rgb(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]})`); drawingContext.fillStyle = grad; text(titleText, x, y); fill(titleColorHighlight[0], titleColorHighlight[1], titleColorHighlight[2], 100); text(titleText, x - offset * 0.5, y - offset * 0.5); pop(); }
 function drawLaunchTitle(alpha) { if (alpha <= 0) return; push(); let launchTitleSize = titleSize * 2.0; textFont(titleFont); textSize(launchTitleSize); textAlign(CENTER, CENTER); let titleText = "DROP"; let x = scaledCanvasWidth / 2; let y = scaledCanvasHeight * 0.3; let baseOffset = launchTitleSize * 0.035; let numLayers = 5; let liquidSpeed = 0.03; let liquidShiftAmount = launchTitleSize * 0.1; let highlightShift = sin(frameCount * liquidSpeed) * liquidShiftAmount; for (let i = numLayers; i >= 1; i--) { let layerOffset = baseOffset * i; let layerAlphaMultiplier = pow((numLayers - i) / numLayers, 1.5); let shadowIntensity = map(i, 1, numLayers, 0.5, 0.9); fill( titleColorShadow[0] * shadowIntensity, titleColorShadow[1] * shadowIntensity, titleColorShadow[2] * shadowIntensity, 190 * layerAlphaMultiplier * (alpha / 255) ); text(titleText, x + layerOffset, y + layerOffset); } let grad = drawingContext.createLinearGradient( x - launchTitleSize * 0.6 + highlightShift, y - launchTitleSize * 0.4, x + launchTitleSize * 0.6 + highlightShift, y + launchTitleSize * 0.4 ); let hRGBA = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.9 * alpha / 255})`; let bRGBA = `rgba(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]}, ${1.0 * alpha / 255})`; let mSR = lerp(titleColorShadow[0], titleColorBase[0], 0.4); let mSG = lerp(titleColorShadow[1], titleColorBase[1], 0.4); let mSB = lerp(titleColorShadow[2], titleColorBase[2], 0.4); let mSRGBA = `rgba(${mSR}, ${mSG}, ${mSB}, ${1.0 * alpha / 255})`; let sRGBA = `rgba(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]}, ${0.8 * alpha / 255})`; grad.addColorStop(0, hRGBA); grad.addColorStop(0.4, bRGBA); grad.addColorStop(0.8, mSRGBA); grad.addColorStop(1, sRGBA); drawingContext.fillStyle = grad; text(titleText, x, y); let glowBlur = max(5, 25 * currentScale) * (alpha / 255); let glowColor = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.5 * (alpha / 255)})`; drawingContext.shadowBlur = glowBlur; drawingContext.shadowColor = glowColor; drawingContext.fillStyle = grad; text(titleText, x, y); drawingContext.shadowBlur = 0; drawingContext.shadowColor = 'rgba(0,0,0,0)'; pop(); }
 function drawEnhancedUIText(txt, x, y, size, fillColor = color(230), align = LEFT) { push(); textFont(uiFont); textSize(size); textAlign(align, TOP); fill(uiTextOutlineColor[0], uiTextOutlineColor[1], uiTextOutlineColor[2], uiTextOutlineColor[3]); let outlineOffset = max(1, 1.5 * currentScale); text(txt, x + outlineOffset, y + outlineOffset); drawingContext.shadowBlur = 0; fill(fillColor); text(txt, x, y); pop(); }
-function drawGameUI() { push(); textFont(uiFont); fill(230, 230, 240, 220); textAlign(LEFT, TOP); let textX = uiSideMargin; let currentTextY = scoreY; let lineHeight = uiScoreTextSize * 1.5; let scoreColor = color(230, 230, 240, 220); if (pointsLossFlashActive) { let flashProgress = (pointsLossFlashEndFrame - frameCount) / pointsLossFlashDurationFrames; let flashSin = sin(flashProgress * PI); scoreColor = lerpColor(color(230, 230, 240, 220), color(brightRed[0], brightRed[1], brightRed[2]), flashSin); } let pointsText = `Points: ${floor(score)}`; drawEnhancedUIText(pointsText, textX, currentTextY, uiScoreTextSize, scoreColor, LEFT); let rightTextY = scoreY; let rightText = ""; if (currentGameMode === 'HIGHSCORE') { rightText = `Balls Left: ${ballsRemaining}`; } else if (currentGameMode === 'SURVIVAL') { rightText = `Total Score Earned: ${sessionScore}`; } if (rightText) { drawEnhancedUIText(rightText, gameAreaWidth - uiSideMargin, rightTextY, uiScoreTextSize, color(230), RIGHT); } if (currentGameMode === 'SURVIVAL') { let decayTextY = scoreY + uiScoreTextSize + (5 * currentScale); let decayInfoText = ""; let showLossText = true; let now = millis(); let timeToNext = nextDecayTime - now; let secsToNext = ceil(max(0, timeToNext) / 1000); let percent = (currentDecayPercent * 100).toFixed(0); decayInfoText = `Points Loss: ${percent}% (Next: ${secsToNext}s)`; if (isPointsLossCountdownActive || pointsLossMessageActive) { showLossText = false; } if (showLossText && nextDecayTime !== Infinity) { let decayTextSize = uiScoreTextSize * 0.85; let decayTextColor = color(200, 200, 200, 220); drawEnhancedUIText(decayInfoText, uiSideMargin, decayTextY, decayTextSize, decayTextColor, LEFT); } } let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY; let dropBtnW = buttonWidth; let dropBtnH = buttonHeight; let dropButtonTextSize = max(8, baseButtonTextSize * currentScale * 1.3); let canDrop = false; let dropLabel = ""; if (currentGameMode === 'SURVIVAL') { let totalDropCost = betAmount; canDrop = (score >= totalDropCost); dropLabel = `Drop (Cost: ${totalDropCost})`; } else if (currentGameMode === 'HIGHSCORE') { canDrop = (ballsRemaining > 0); dropLabel = `Drop Ball (${ballsRemaining} left)`; } drawNeonButton( dropLabel, dropBtnX, dropBtnY, dropBtnW, dropBtnH, neonBlue, 0, uiFont, dropButtonTextSize, canDrop && gameState === 'PLAYING' ); pop(); }
-function drawGameOverOverlay() { push(); fill(0, 0, 0, 190); rect(0, 0, gameAreaWidth, scaledCanvasHeight); textFont(titleFont); textAlign(CENTER, CENTER); if (gameOverState === 'SHOWING_FORM') { let message = ""; let messageSize = max(26, 52 * currentScale); let messageY = scaledCanvasHeight * 0.35; let messageColor = color(220, 220, 220); if (currentGameMode === 'SURVIVAL') { message = "Game Over"; messageColor = color(trueRed[0], trueRed[1], trueRed[2]); let sessionScoreY = messageY + messageSize * 0.7; let sessionScoreSize = messageSize * 0.6; textSize(sessionScoreSize); fill(220, 220, 180); drawingContext.shadowBlur = max(4, 12 * currentScale); drawingContext.shadowColor = 'rgba(220, 220, 180, 0.6)'; text(`Total Score: ${sessionScore}`, gameAreaWidth / 2, sessionScoreY); drawingContext.shadowBlur = 0; } else if (currentGameMode === 'HIGHSCORE') { message = `Final Score: ${score}`; messageColor = color(neonGreen[0], neonGreen[1], neonGreen[2]); } textSize(messageSize); drawingContext.shadowBlur = max(8, 18 * currentScale); drawingContext.shadowColor = messageColor.toString(); fill(messageColor); text(message, gameAreaWidth / 2, messageY); drawingContext.shadowBlur = 0; const form = document.getElementById('leaderboard-form'); if (form && form.style.display !== 'none') { positionLeaderboardForm(form); } } else if (gameOverState === 'SHOWING_LEADERBOARD') { let titleY = leaderboardYOffset; textSize(leaderboardTitleSize); fill(220, 200, 255); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = 'rgba(220, 200, 255, 0.5)'; text("Leaderboard", gameAreaWidth / 2, titleY); drawingContext.shadowBlur = 0; drawLeaderboard(); let btnW = buttonWidth * gameOverButtonWidthScale; let btnH = buttonHeight * gameOverButtonHeightScale; let btnX = gameAreaWidth / 2 - btnW / 2; let spacing = gameOverButtonSpacing * currentScale; let btnFontSize = max(10, baseButtonTextSize * currentScale * 1.6); let menuBtnY = scaledCanvasHeight - spacing * 1.5 - btnH; let restartBtnY = menuBtnY - spacing - btnH; drawNeonButton("Restart", btnX, restartBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); drawNeonButton("Menu", btnX, menuBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); } pop(); }
-function drawLeaderboard() { push(); textFont(uiFont); textSize(leaderboardTextSize); textAlign(LEFT, TOP); let startY = leaderboardYOffset + leaderboardTitleSize + 20 * currentScale; let lineH = (leaderboardTextSize + leaderboardEntrySpacing) * 1.3; const maxRankStr = "10."; const maxNameStr = "WWWWWWWWWW"; const maxScoreStr = "9,999,999"; const rankColWidth = textWidth(maxRankStr) + 5 * currentScale; const nameColWidth = textWidth(maxNameStr) + 15 * currentScale; const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale; const totalContentWidth = rankColWidth + nameColWidth + scoreColWidth; const leaderboardCenterX = gameAreaWidth / 2; const blockStartX = leaderboardCenterX - totalContentWidth / 2; const rankColumnX = blockStartX; const nameColumnX = rankColumnX + rankColWidth; const scoreColumnAlignX = nameColumnX + nameColWidth + scoreColWidth; const strongGold = color(255, 190, 0); const mediumGold = color(255, 215, 0); const lightGold = color(255, 235, 100); const defaultColor = color(210, 210, 230); if (leaderboardLoading) { textAlign(CENTER, TOP); fill(200); textStyle(NORMAL); text("Loading Leaderboard...", leaderboardCenterX, startY); } else if (leaderboardError) { textAlign(CENTER, TOP); fill(softRed[0], softRed[1], softRed[2]); textStyle(NORMAL); text(`Error: ${leaderboardError}`, leaderboardCenterX, startY); text("Could not load leaderboard.", leaderboardCenterX, startY + lineH); } else if (leaderboardData && leaderboardData.length > 0) { let bottomButtonAreaY = scaledCanvasHeight - (buttonHeight * gameOverButtonHeightScale * 2 + gameOverButtonSpacing * currentScale * 3); let availableHeight = bottomButtonAreaY - startY; let maxVisibleEntries = floor(availableHeight / lineH); maxVisibleEntries = max(0, maxVisibleEntries); for (let i = 0; i < min(leaderboardData.length, maxVisibleEntries); i++) { let entry = leaderboardData[i]; let rank = i + 1; let nameStr = (entry.player_name || 'ANONYMOUS').toUpperCase().substring(0, 10); let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A'; let rankStr = `${rank}.`; let entryColor = defaultColor; let applyBold = false; if (i === 0) { entryColor = lightGold; applyBold = true; } else if (i === 1) { entryColor = mediumGold; applyBold = true; } else if (i === 2) { entryColor = strongGold; applyBold = true; } if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); } fill(entryColor); let currentY = startY + i * lineH; textAlign(LEFT, TOP); text(rankStr, rankColumnX, currentY); textAlign(LEFT, TOP); text(nameStr, nameColumnX, currentY); textAlign(RIGHT, TOP); text(scoreStr, scoreColumnAlignX, currentY); } textStyle(NORMAL); if (leaderboardData.length > maxVisibleEntries) { fill(180); textAlign(CENTER, TOP); text("...", leaderboardCenterX, startY + maxVisibleEntries * lineH); } } else if (leaderboardData) { fill(180); textAlign(CENTER, TOP); textStyle(NORMAL); text("Leaderboard is empty.", leaderboardCenterX, startY); } else { fill(150); textAlign(CENTER, TOP); textStyle(NORMAL); text("No leaderboard data.", leaderboardCenterX, startY); } pop(); }
+function drawGameUI() { push(); textFont(uiFont); fill(230, 230, 240, 220); textAlign(LEFT, TOP); let textX = uiSideMargin; let currentTextY = scoreY; let lineHeight = uiScoreTextSize * 1.5; let scoreColor = color(230, 230, 240, 220); // Default color for Gold display
+    // Check if the Gold Loss flash should be active
+    if (goldLossFlashActive) {
+        let flashProgress = (goldLossFlashEndFrame - frameCount) / pointsLossFlashDurationFrames;
+        let flashSin = sin(flashProgress * PI);
+        scoreColor = lerpColor(color(230, 230, 240, 220), color(brightRed[0], brightRed[1], brightRed[2]), flashSin);
+    }
+    // Display Gold amount
+    let goldText = `Gold: ${floor(score)}`; // Display current Gold
+    drawEnhancedUIText(goldText, textX, currentTextY, uiScoreTextSize, scoreColor, LEFT);
+
+    let rightTextY = scoreY; let rightText = "";
+    if (currentGameMode === 'HIGHSCORE') {
+        rightText = `Balls Left: ${ballsRemaining}`;
+    } else if (currentGameMode === 'SURVIVAL') {
+        rightText = `Total Points Earned: ${sessionScore}`; // <<< REVERTED 'Gold' to 'Points'
+    }
+    if (rightText) {
+        drawEnhancedUIText(rightText, gameAreaWidth - uiSideMargin, rightTextY, uiScoreTextSize, color(230), RIGHT);
+    }
+
+    if (currentGameMode === 'SURVIVAL') {
+        let decayTextY = scoreY + uiScoreTextSize + (5 * currentScale);
+        let decayInfoText = "";
+        let showLossText = true;
+        let now = millis();
+        let timeToNext = nextDecayTime - now;
+        let secsToNext = ceil(max(0, timeToNext) / 1000);
+        let percent = (currentDecayPercent * 100).toFixed(0);
+        decayInfoText = `Gold Loss: ${percent}% (Next: ${secsToNext}s)`; // Keep as Gold Loss
+        if (isGoldLossCountdownActive || goldLossMessageActive) {
+            showLossText = false;
+        }
+        if (showLossText && nextDecayTime !== Infinity) {
+            let decayTextSize = uiScoreTextSize * 0.85;
+            let decayTextColor = color(200, 200, 200, 220);
+            drawEnhancedUIText(decayInfoText, uiSideMargin, decayTextY, decayTextSize, decayTextColor, LEFT);
+        }
+    }
+
+    let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY;
+    let dropBtnW = buttonWidth; let dropBtnH = buttonHeight;
+    let dropButtonTextSize = max(8, baseButtonTextSize * currentScale * 1.3);
+    let canDrop = false; let dropLabel = "";
+    if (currentGameMode === 'SURVIVAL') {
+        let totalDropCost = betAmount;
+        canDrop = (score >= totalDropCost); // Check if enough Gold
+        dropLabel = `Drop (Cost: ${totalDropCost})`; // Cost implicitly means Gold
+    } else if (currentGameMode === 'HIGHSCORE') {
+        canDrop = (ballsRemaining > 0);
+        dropLabel = `Drop Ball (${ballsRemaining} left)`;
+    }
+    drawNeonButton( dropLabel, dropBtnX, dropBtnY, dropBtnW, dropBtnH, neonBlue, 0, uiFont, dropButtonTextSize, canDrop && gameState === 'PLAYING' );
+    pop();
+}
+function drawGameOverOverlay() { push(); fill(0, 0, 0, 190); rect(0, 0, gameAreaWidth, scaledCanvasHeight); textFont(titleFont); textAlign(CENTER, CENTER); if (gameOverState === 'SHOWING_FORM') { let message = ""; let messageSize = max(26, 52 * currentScale); let messageY = scaledCanvasHeight * 0.35; let messageColor = color(220, 220, 220); if (currentGameMode === 'SURVIVAL') { message = "Game Over"; messageColor = color(trueRed[0], trueRed[1], trueRed[2]); let sessionScoreY = messageY + messageSize * 0.7; let sessionScoreSize = messageSize * 0.6; textSize(sessionScoreSize); fill(220, 220, 180); drawingContext.shadowBlur = max(4, 12 * currentScale); drawingContext.shadowColor = 'rgba(220, 220, 180, 0.6)'; text(`Total Points: ${sessionScore}`, gameAreaWidth / 2, sessionScoreY); // <<< REVERTED 'Gold' to 'Points'
+ drawingContext.shadowBlur = 0; } else if (currentGameMode === 'HIGHSCORE') { message = `Final Gold: ${score}`; // Keep as Gold
+ messageColor = color(neonGreen[0], neonGreen[1], neonGreen[2]); } textSize(messageSize); drawingContext.shadowBlur = max(8, 18 * currentScale); drawingContext.shadowColor = messageColor.toString(); fill(messageColor); text(message, gameAreaWidth / 2, messageY); drawingContext.shadowBlur = 0; const form = document.getElementById('leaderboard-form'); if (form && form.style.display !== 'none') { positionLeaderboardForm(form); } } else if (gameOverState === 'SHOWING_LEADERBOARD') { let titleY = leaderboardYOffset; textSize(leaderboardTitleSize); fill(220, 200, 255); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = 'rgba(220, 200, 255, 0.5)'; text("Leaderboard", gameAreaWidth / 2, titleY); drawingContext.shadowBlur = 0; drawLeaderboard(); let btnW = buttonWidth * gameOverButtonWidthScale; let btnH = buttonHeight * gameOverButtonHeightScale; let btnX = gameAreaWidth / 2 - btnW / 2; let spacing = gameOverButtonSpacing * currentScale; let btnFontSize = max(10, baseButtonTextSize * currentScale * 1.6); let menuBtnY = scaledCanvasHeight - spacing * 1.5 - btnH; let restartBtnY = menuBtnY - spacing - btnH; drawNeonButton("Restart", btnX, restartBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); drawNeonButton("Menu", btnX, menuBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); } pop(); }
+function drawLeaderboard() { push(); textFont(uiFont); textSize(leaderboardTextSize); textAlign(LEFT, TOP); let startY = leaderboardYOffset + leaderboardTitleSize + 20 * currentScale; let lineH = (leaderboardTextSize + leaderboardEntrySpacing) * 1.3; const maxRankStr = "10."; const maxNameStr = "WWWWWWWWWW"; const maxScoreStr = "9,999,999"; const rankColWidth = textWidth(maxRankStr) + 5 * currentScale; const nameColWidth = textWidth(maxNameStr) + 15 * currentScale; const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale; const totalContentWidth = rankColWidth + nameColWidth + scoreColWidth; const leaderboardCenterX = gameAreaWidth / 2; const blockStartX = leaderboardCenterX - totalContentWidth / 2; const rankColumnX = blockStartX; const nameColumnX = rankColumnX + rankColWidth; const scoreColumnAlignX = nameColumnX + nameColWidth + scoreColWidth; const strongGold = color(255, 190, 0); const mediumGold = color(255, 215, 0); const lightGold = color(255, 235, 100); const defaultColor = color(210, 210, 230); if (leaderboardLoading) { textAlign(CENTER, TOP); fill(200); textStyle(NORMAL); text("Loading Leaderboard...", leaderboardCenterX, startY); } else if (leaderboardError) { textAlign(CENTER, TOP); fill(softRed[0], softRed[1], softRed[2]); textStyle(NORMAL); text(`Error: ${leaderboardError}`, leaderboardCenterX, startY); text("Could not load leaderboard.", leaderboardCenterX, startY + lineH); } else if (leaderboardData && leaderboardData.length > 0) { let bottomButtonAreaY = scaledCanvasHeight - (buttonHeight * gameOverButtonHeightScale * 2 + gameOverButtonSpacing * currentScale * 3); let availableHeight = bottomButtonAreaY - startY; let maxVisibleEntries = floor(availableHeight / lineH); maxVisibleEntries = max(0, maxVisibleEntries); for (let i = 0; i < min(leaderboardData.length, maxVisibleEntries); i++) { let entry = leaderboardData[i]; let rank = i + 1; let nameStr = (entry.player_name || 'ANONYMOUS').toUpperCase().substring(0, 10); let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A'; // Score here represents the value submitted (Gold or Points depending on mode)
+ let rankStr = `${rank}.`; let entryColor = defaultColor; let applyBold = false; if (i === 0) { entryColor = lightGold; applyBold = true; } else if (i === 1) { entryColor = mediumGold; applyBold = true; } else if (i === 2) { entryColor = strongGold; applyBold = true; } if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); } fill(entryColor); let currentY = startY + i * lineH; textAlign(LEFT, TOP); text(rankStr, rankColumnX, currentY); textAlign(LEFT, TOP); text(nameStr, nameColumnX, currentY); textAlign(RIGHT, TOP); text(scoreStr, scoreColumnAlignX, currentY); } textStyle(NORMAL); if (leaderboardData.length > maxVisibleEntries) { fill(180); textAlign(CENTER, TOP); text("...", leaderboardCenterX, startY + maxVisibleEntries * lineH); } } else if (leaderboardData) { fill(180); textAlign(CENTER, TOP); textStyle(NORMAL); text("Leaderboard is empty.", leaderboardCenterX, startY); } else { fill(150); textAlign(CENTER, TOP); textStyle(NORMAL); text("No leaderboard data.", leaderboardCenterX, startY); } pop(); }
 function drawNeonButton(label, x, y, w, h, baseColor, cost = 0, font = uiFont, fontSize = 15, enabled = true) { push(); noStroke(); translate(x, y); let cornerRadius = h * 0.3; let gradColorLight, gradColorDark, glowColor, textColor; let isDisabled = !enabled; if (isDisabled) { gradColorLight = color(80, 80, 90, 200); gradColorDark = color(50, 50, 60, 200); glowColor = color(0, 0, 0, 0); textColor = color(140, 140, 150); } else { gradColorLight = color(baseColor[0], baseColor[1], baseColor[2], 255); gradColorDark = color(baseColor[0] * 0.6, baseColor[1] * 0.6, baseColor[2] * 0.6, 255); glowColor = color(baseColor[0], baseColor[1], baseColor[2], 180); textColor = color(255); } if (enabled) { drawingContext.shadowBlur = max(6, 22 * currentScale); drawingContext.shadowColor = glowColor.toString(); } else { drawingContext.shadowBlur = 0; } let grad = drawingContext.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, gradColorLight.toString()); grad.addColorStop(1, gradColorDark.toString()); drawingContext.fillStyle = grad; rect(0, 0, w, h, cornerRadius); drawingContext.shadowBlur = 0; fill(textColor); textFont(font); textSize(fontSize); textAlign(CENTER, CENTER); text(label, w / 2, h / 2 + max(1, 1.5 * currentScale)); pop(); }
 function drawSlider(slider) { if (!slider) return; push(); let sliderXRelative = slider.x; let trackY = slider.y + 25 * currentScale; let scaledFontSize = max(8, 12 * currentScale); let isDisabled = slider.enabled !== undefined && !slider.enabled; let labelColor = isDisabled ? color(120) : color(220); let trackColor = isDisabled ? color(80) : color(120); let handleColor = isDisabled ? color(100) : neonYellow; let handleGlow = isDisabled ? 'rgba(100, 100, 100, 0)' : 'rgba(255, 255, 0, 0.7)'; let valueColor = isDisabled ? color(120) : color(220); fill(labelColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, BOTTOM); text(slider.label, sliderXRelative + sliderWidth / 2, trackY - 6 * currentScale); stroke(trackColor); strokeWeight(max(2, 4 * currentScale)); line(sliderXRelative, trackY, sliderXRelative + sliderWidth, trackY); let handleXRelative = map(slider.value, slider.minVal, slider.maxVal, sliderXRelative, sliderXRelative + sliderWidth); handleXRelative = constrain(handleXRelative, sliderXRelative, sliderXRelative + sliderWidth); noStroke(); fill(handleColor); if (!isDisabled) { drawingContext.shadowBlur = max(4, 10 * currentScale); drawingContext.shadowColor = handleGlow; } ellipse(handleXRelative, trackY, sliderHandleSize, sliderHandleSize); drawingContext.shadowBlur = 0; fill(valueColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, TOP); let valueText = ""; if (slider === musicVolumeSlider) { valueText = floor(slider.value); } else if (slider === speedSlider) { valueText = slider.value.toFixed(1) + 'x'; } else if (slider === sfxVolumeSlider) { valueText = slider.value.toFixed(2); } else { valueText = floor(slider.value); } text(valueText, sliderXRelative + sliderWidth / 2, trackY + 8 * currentScale); pop(); }
 function drawStatisticsBars() { push(); const chartHeightMax = max(40, 80 * currentScale); const chartWidth = max(90, 180 * currentScale); const chartX = gameAreaWidth - chartWidth - max(5, 10 * currentScale); const chartY = max(40, 80 * currentScale); let maxHitCount = 0; for (let count of slotHitCounts) { if (count > maxHitCount) { maxHitCount = count; } } if (maxHitCount === 0) { stroke(100); strokeWeight(max(1, 1 * currentScale)); line(chartX, chartY + chartHeightMax, chartX + chartWidth, chartY + chartHeightMax); noStroke(); pop(); return; } const barWidth = chartWidth / numSlots; translate(chartX, chartY); for (let i = 0; i < numSlots; i++) { let count = slotHitCounts[i]; let barH = map(count, 0, maxHitCount, 0, chartHeightMax); let barX = i * barWidth; let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(50 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let barColor = colorFactor < 0.5 ? lerpColor(color(255, 255, 0, 200), color(255, 165, 0, 200), map(colorFactor, 0, 0.5, 0, 1)) : lerpColor(color(255, 165, 0, 200), color(200, 0, 0, 200), map(colorFactor, 0.5, 1, 0, 1)); let currentBarColor = barColor; if (histogramBarPulseState[i] > 0) { let pulseProgress = map(histogramBarPulseState[i], histogramPulseDuration, 0, 1, 0); let pulseBrightness = lerp(1.0, 1.8, pulseProgress * pulseProgress); currentBarColor = color( min(255, red(barColor) * pulseBrightness), min(255, green(barColor) * pulseBrightness), min(255, blue(barColor) * pulseBrightness), alpha(barColor) ); histogramBarPulseState[i]--; } fill(currentBarColor); noStroke(); rect(barX, chartHeightMax - barH, barWidth - max(1, 1 * currentScale), barH); } stroke(150); strokeWeight(max(1, 1 * currentScale)); line(0, chartHeightMax, chartWidth, chartHeightMax); noStroke(); pop(); }
@@ -599,14 +660,17 @@ function createBoundaries() { boundaries.forEach(body => { if (Composite.get(wor
 function createPhysicsBall(x, y) { const scaledBallRadius = currentBallRadius * currentScale; const ballColor = neonBlue; const label = 'ball_regular'; const options = { restitution: ballRestitution, friction: 0.05, frictionAir: ballFrictionAir, density: ballDensity, label: label, isStatic: false, plugin: { type: 'regular', hitWall: false, path: [] }, render: { fillStyle: `rgb(${ballColor[0]}, ${ballColor[1]}, ${ballColor[2]})` } }; let ball = Bodies.circle(x, y, scaledBallRadius, options); Body.setVelocity(ball, { x: Common.random(-0.1, 0.1) * currentScale, y: 0 }); World.add(world, ball); balls.push(ball); }
 
 // ============================ Collision & Scoring ============================
-// ... (no changes needed here) ...
-function handleCollisions(event) { let pairs = event.pairs; for (let i = 0; i < pairs.length; i++) { let pair = pairs[i]; if (!pair || !pair.isActive || !pair.collision) continue; let bodyA = pair.bodyA; let bodyB = pair.bodyB; let ball = null, sensor = null, ground = null, wall = null, peg = null, divider = null; if (bodyA.label === 'ball_regular') ball = bodyA; else if (bodyB.label === 'ball_regular') ball = bodyB; if (bodyA.label.startsWith('slot_')) sensor = bodyA; else if (bodyB.label.startsWith('slot_')) sensor = bodyB; if (bodyA.label === 'ground') ground = bodyA; else if (bodyB.label === 'ground') ground = bodyB; if (bodyA.label === 'wall') wall = bodyA; else if (bodyB.label === 'wall') wall = bodyB; if (bodyA.label === 'peg') peg = bodyA; else if (bodyB.label === 'peg') peg = bodyB; if (bodyA.label === 'divider') divider = bodyA; else if (bodyB.label === 'divider') divider = bodyB; if (ball && sensor) { if (!Composite.get(world, ball.id, 'body')) continue; let hitSlotIndex = parseInt(sensor.label.split('_')[1]); if (hitSlotIndex >= 0 && hitSlotIndex < numSlots) { let sensorBody = slotSensors[hitSlotIndex]; if (!sensorBody) { console.warn(`Collision: Could not find sensor body for index ${hitSlotIndex}`); continue; } let slotCenterX = sensorBody.position.x; let slotCenterY = sensorBody.position.y; let slotWidth = sensorBody.bounds.max.x - sensorBody.bounds.min.x; slotHitCounts[hitSlotIndex]++; histogramBarPulseState[hitSlotIndex] = histogramPulseDuration; slotBounceState[hitSlotIndex] = bounceDuration; slotGlowState[hitSlotIndex] = slotGlowDuration; createParticleBurst(slotCenterX, slotCenterY); createRippleEffect(slotCenterX, slotCenterY, slotWidth); createBackgroundRipple(slotCenterX, slotCenterY); let baseMultiplierValue = slotMultipliers[hitSlotIndex]; let finalMultiplier = baseMultiplierValue; let pointsWon = 0; if (currentGameMode === 'SURVIVAL') { if (isDoubleMultiplierActive) finalMultiplier *= 2; pointsWon = betAmount * finalMultiplier; } else if (currentGameMode === 'HIGHSCORE') { finalMultiplier = baseMultiplierValue; pointsWon = finalMultiplier * 10; } let pointsToAdd = floor(pointsWon); score += pointsToAdd; sessionScore += pointsToAdd; recentHits.push({ value: finalMultiplier, timestamp: frameCount }); if (recentHits.length > maxMultiplierHistory) { recentHits.shift(); } if (blopSound && blopSound.isLoaded()) { blopSound.play(); } if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else { console.warn(`Invalid slot index ${hitSlotIndex} from sensor ${sensor.label}. Removing ball.`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } } else if (ball && peg) { if (peg.plugin) { peg.plugin.glowTimer = pegGlowDuration; } if (pair.collision.normal) { let forceDirection = Matter.Vector.sub(ball.position, peg.position); forceDirection = Matter.Vector.normalise(forceDirection); forceDirection = Matter.Vector.mult(forceDirection, horizontalKickStrength); forceDirection.y *= 0.1; Body.applyForce(ball, ball.position, forceDirection); } createBackgroundRipple(peg.position.x, peg.position.y); } else if (ball && wall) { if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else if (ball && (ground || divider)) { /* Physics handles bounce */ } } }
+// ... (no changes needed here, scoring logic uses 'score' (Gold) and 'sessionScore' (Points) vars correctly) ...
+function handleCollisions(event) { let pairs = event.pairs; for (let i = 0; i < pairs.length; i++) { let pair = pairs[i]; if (!pair || !pair.isActive || !pair.collision) continue; let bodyA = pair.bodyA; let bodyB = pair.bodyB; let ball = null, sensor = null, ground = null, wall = null, peg = null, divider = null; if (bodyA.label === 'ball_regular') ball = bodyA; else if (bodyB.label === 'ball_regular') ball = bodyB; if (bodyA.label.startsWith('slot_')) sensor = bodyA; else if (bodyB.label.startsWith('slot_')) sensor = bodyB; if (bodyA.label === 'ground') ground = bodyA; else if (bodyB.label === 'ground') ground = bodyB; if (bodyA.label === 'wall') wall = bodyA; else if (bodyB.label === 'wall') wall = bodyB; if (bodyA.label === 'peg') peg = bodyA; else if (bodyB.label === 'peg') peg = bodyB; if (bodyA.label === 'divider') divider = bodyA; else if (bodyB.label === 'divider') divider = bodyB; if (ball && sensor) { if (!Composite.get(world, ball.id, 'body')) continue; let hitSlotIndex = parseInt(sensor.label.split('_')[1]); if (hitSlotIndex >= 0 && hitSlotIndex < numSlots) { let sensorBody = slotSensors[hitSlotIndex]; if (!sensorBody) { console.warn(`Collision: Could not find sensor body for index ${hitSlotIndex}`); continue; } let slotCenterX = sensorBody.position.x; let slotCenterY = sensorBody.position.y; let slotWidth = sensorBody.bounds.max.x - sensorBody.bounds.min.x; slotHitCounts[hitSlotIndex]++; histogramBarPulseState[hitSlotIndex] = histogramPulseDuration; slotBounceState[hitSlotIndex] = bounceDuration; slotGlowState[hitSlotIndex] = slotGlowDuration; createParticleBurst(slotCenterX, slotCenterY); createRippleEffect(slotCenterX, slotCenterY, slotWidth); createBackgroundRipple(slotCenterX, slotCenterY); let baseMultiplierValue = slotMultipliers[hitSlotIndex]; let finalMultiplier = baseMultiplierValue; let goldOrPointsWon = 0; // Represents amount won (could be Gold or Points based on mode interpretation)
+ if (currentGameMode === 'SURVIVAL') { if (isDoubleMultiplierActive) finalMultiplier *= 2; goldOrPointsWon = betAmount * finalMultiplier; } else if (currentGameMode === 'HIGHSCORE') { finalMultiplier = baseMultiplierValue; goldOrPointsWon = finalMultiplier * 10; } let amountToAdd = floor(goldOrPointsWon); score += amountToAdd; // Add to current Gold
+ sessionScore += amountToAdd; // Add to total Points earned (Survival)
+ recentHits.push({ value: finalMultiplier, timestamp: frameCount }); if (recentHits.length > maxMultiplierHistory) { recentHits.shift(); } if (blopSound && blopSound.isLoaded()) { blopSound.play(); } if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else { console.warn(`Invalid slot index ${hitSlotIndex} from sensor ${sensor.label}. Removing ball.`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } } else if (ball && peg) { if (peg.plugin) { peg.plugin.glowTimer = pegGlowDuration; } if (pair.collision.normal) { let forceDirection = Matter.Vector.sub(ball.position, peg.position); forceDirection = Matter.Vector.normalise(forceDirection); forceDirection = Matter.Vector.mult(forceDirection, horizontalKickStrength); forceDirection.y *= 0.1; Body.applyForce(ball, ball.position, forceDirection); } createBackgroundRipple(peg.position.x, peg.position.y); } else if (ball && wall) { if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else if (ball && (ground || divider)) { /* Physics handles bounce */ } } }
 
 
 // ============================ Event Handlers & Other Logic ============================
 
 // --- showLeaderboardForm, positionLeaderboardForm, hideLeaderboardForm, handleScoreSubmittedSuccessfully, fetchLeaderboardData ---
-// ... (no changes needed in these form/leaderboard functions) ...
+// ... (no changes needed in these form/leaderboard functions, they handle the score value passed to them) ...
 function showLeaderboardForm(finalScore, mode) {
     const form = document.getElementById('leaderboard-form');
     const scoreInput = document.getElementById('score');
@@ -615,7 +679,7 @@ function showLeaderboardForm(finalScore, mode) {
     const submitButton = form ? form.querySelector('button[type="submit"]') : null;
 
     if (form && scoreInput && modeInput && nameInput && submitButton) {
-        scoreInput.value = Math.floor(finalScore);
+        scoreInput.value = Math.floor(finalScore); // finalScore is sessionScore (Points) for Survival, score (Gold) for High Score
         modeInput.value = mode;
         nameInput.value = ''; // Clear previous name
         submitButton.disabled = false; // Ensure button is enabled
@@ -685,6 +749,7 @@ async function fetchLeaderboardData() {
     }
     console.log(`Fetching leaderboard data from ${tableName}...`);
     try {
+        // Selects the 'score' column which represents total points for Survival, final gold for High Score
         const { data, error } = await window.supabaseClient
             .from(tableName)
             .select('player_name, score')
@@ -922,9 +987,9 @@ function handleDrop() {
     // Determine if a drop is possible (already checked by caller - mousePressed/keyPressed)
     if (currentGameMode === 'SURVIVAL') {
         let cost = betAmount;
-        // Final check for score just in case
+        // Final check for score (Gold) just in case
         if (score >= cost) {
-            score -= cost;
+            score -= cost; // Deduct Gold cost
             let startX = markerX + random(-1 * currentScale, 1 * currentScale);
             let startY = markerY;
             createPhysicsBall(startX, startY);
@@ -954,7 +1019,7 @@ function handleDrop() {
                 }, dropDelay / 3);
             }
         } else {
-            if (DEBUG_MODE) console.log("Drop prevented: Insufficient points (final check).");
+            if (DEBUG_MODE) console.log("Drop prevented: Insufficient gold (final check).");
         }
     } else if (currentGameMode === 'HIGHSCORE') {
         // Final check for balls remaining
@@ -971,24 +1036,27 @@ function handleDrop() {
 
 
 // --- Survival Decay Logic ---
-// ... (no changes needed here) ...
 function handleSurvivalDecay() {
     if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
     let now = millis();
     let timeToNext = nextDecayTime - now;
-    if (timeToNext <= pointsLossWarningStartTime * 1000 && timeToNext > 0 && !isPointsLossCountdownActive && !pointsLossMessageActive) {
-        isPointsLossCountdownActive = true; pointsLossCountdownValue = pointsLossWarningStartTime; pointsLossCountdownAnimProgress = 0; if(DEBUG_MODE) console.log("Starting loss countdown...");
+    // Check if countdown warning should start
+    if (timeToNext <= pointsLossWarningStartTime * 1000 && timeToNext > 0 && !isGoldLossCountdownActive && !goldLossMessageActive) {
+        isGoldLossCountdownActive = true; goldLossCountdownValue = pointsLossWarningStartTime; goldLossCountdownAnimProgress = 0;
+        if(DEBUG_MODE) console.log("Starting gold loss countdown...");
     }
+    // Check if decay should be applied
     if (now >= nextDecayTime) {
-        let decayAmount = floor(score * currentDecayPercent);
-        pointsLostAmountForDisplay = decayAmount;
+        let decayAmount = floor(score * currentDecayPercent); // Calculate Gold loss
+        goldLostAmountForDisplay = decayAmount; // Store for display
         if (score > 0 && decayAmount > 0) {
-            score -= decayAmount; if (DEBUG_MODE) console.log(`Points Loss Applied: -${decayAmount} points (${(currentDecayPercent * 100).toFixed(0)}%) | New Score: ${floor(score)}`);
-            pointsLossFlashActive = true; pointsLossFlashEndFrame = frameCount + pointsLossFlashDurationFrames;
-            isPointsLossCountdownActive = false; pointsLossMessageActive = true; pointsLossMessageProgress = 0;
+            score -= decayAmount; // Apply Gold loss
+            if (DEBUG_MODE) console.log(`Gold Loss Applied: -${decayAmount} gold (${(currentDecayPercent * 100).toFixed(0)}%) | New Gold: ${floor(score)}`);
+            goldLossFlashActive = true; goldLossFlashEndFrame = frameCount + pointsLossFlashDurationFrames;
+            isGoldLossCountdownActive = false; goldLossMessageActive = true; goldLossMessageProgress = 0;
         } else {
-            if (DEBUG_MODE && decayAmount <= 0) console.log(`Points Loss skipped: Decay amount was ${decayAmount}`);
-            isPointsLossCountdownActive = false; pointsLossMessageActive = false;
+            if (DEBUG_MODE && decayAmount <= 0) console.log(`Gold Loss skipped: Decay amount was ${decayAmount}`);
+            isGoldLossCountdownActive = false; goldLossMessageActive = false;
         }
         currentDecayPercent = min(survivalMaxDecayPercent, currentDecayPercent + survivalDecayIncrement);
         lastDecayTime = now;
@@ -996,8 +1064,64 @@ function handleSurvivalDecay() {
     }
 }
 
-function updatePointsLossVisuals() { if (!isPointsLossCountdownActive && !pointsLossMessageActive) return; let now = millis(); if (isPointsLossCountdownActive) { let timeToNext = nextDecayTime - now; let secsToNextExact = max(0, timeToNext / 1000.0); let newCountdownValue = ceil(secsToNextExact); if (newCountdownValue <= 0) { isPointsLossCountdownActive = false; pointsLossCountdownValue = 0; } else { pointsLossCountdownValue = newCountdownValue; pointsLossCountdownAnimProgress = 1.0 - (secsToNextExact - floor(secsToNextExact)); pointsLossCountdownAnimProgress = constrain(pointsLossCountdownAnimProgress, 0, 1); } } else if (pointsLossMessageActive) { pointsLossMessageProgress += 1 / lossMessageDuration; pointsLossMessageProgress = min(pointsLossMessageProgress, 1); if (pointsLossMessageProgress >= 1) { pointsLossMessageActive = false; } } }
-function drawPointsLossVisuals() { if (!isPointsLossCountdownActive && !pointsLossMessageActive) return; push(); textFont(titleFont); textAlign(CENTER, CENTER); rectMode(CENTER); if (isPointsLossCountdownActive && pointsLossCountdownValue > 0) { let percent = (currentDecayPercent * 100).toFixed(0); let countdownText = `Losing ${percent}% of points\nin ${pointsLossCountdownValue} seconds`; let baseSize = lossCountdownTextSizeBase * currentScale; let easeInOut = 0.5 - 0.5 * cos(pointsLossCountdownAnimProgress * PI); let currentScaleFactor = lerp(1.0, lossCountdownPulseScale, easeInOut); let currentAlpha = lerp(150, 255, easeInOut); let currentColor = lerpColor(color(greyishPurpleBase), color(greyishPurpleHighlight), easeInOut); drawingContext.shadowBlur = max(6, 18 * currentScale) * easeInOut; drawingContext.shadowColor = `rgba(${greyishPurpleHighlight[0]}, ${greyishPurpleHighlight[1]}, ${greyishPurpleHighlight[2]}, 0.7)`; fill(currentColor.levels[0], currentColor.levels[1], currentColor.levels[2], currentAlpha); textSize(baseSize * currentScaleFactor); text(countdownText, gameAreaWidth / 2, scaledCanvasHeight / 2); drawingContext.shadowBlur = 0; } else if (pointsLossMessageActive) { let messageText = `-${pointsLostAmountForDisplay} Points`; let baseSize = lossMessageTextSizeBase * currentScale; let easeOutQuint = (x) => 1 - pow(1 - x, 5); let progressEasedScale = easeOutQuint(pointsLossMessageProgress); let progressEasedAlpha = pointsLossMessageProgress * pointsLossMessageProgress; let currentScaleFactor = lerp(lossMessageStartScale, 1.0, progressEasedScale); let currentAlpha = lerp(255, 0, progressEasedAlpha); let glowAmount = lerp(lossMessageGlowBlur * currentScale, 0, progressEasedAlpha); fill(neonRed[0], neonRed[1], neonRed[2], currentAlpha); drawingContext.shadowBlur = glowAmount; drawingContext.shadowColor = `rgba(${neonRed[0]}, ${neonRed[1]}, ${neonRed[2]}, 0.7)`; textSize(baseSize * currentScaleFactor); text(messageText, gameAreaWidth / 2, scaledCanvasHeight / 2); drawingContext.shadowBlur = 0; } pop(); }
+function updateGoldLossVisuals() {
+    if (!isGoldLossCountdownActive && !goldLossMessageActive) return;
+    let now = millis();
+    if (isGoldLossCountdownActive) {
+        let timeToNext = nextDecayTime - now;
+        let secsToNextExact = max(0, timeToNext / 1000.0);
+        let newCountdownValue = ceil(secsToNextExact);
+        if (newCountdownValue <= 0) {
+            isGoldLossCountdownActive = false; goldLossCountdownValue = 0;
+        } else {
+            goldLossCountdownValue = newCountdownValue;
+            goldLossCountdownAnimProgress = 1.0 - (secsToNextExact - floor(secsToNextExact));
+            goldLossCountdownAnimProgress = constrain(goldLossCountdownAnimProgress, 0, 1);
+        }
+    } else if (goldLossMessageActive) {
+        goldLossMessageProgress += 1 / lossMessageDuration;
+        goldLossMessageProgress = min(goldLossMessageProgress, 1);
+        if (goldLossMessageProgress >= 1) {
+            goldLossMessageActive = false;
+        }
+    }
+}
+function drawGoldLossVisuals() {
+    if (!isGoldLossCountdownActive && !goldLossMessageActive) return;
+    push();
+    textFont(titleFont); textAlign(CENTER, CENTER); rectMode(CENTER);
+    if (isGoldLossCountdownActive && goldLossCountdownValue > 0) {
+        let percent = (currentDecayPercent * 100).toFixed(0);
+        let countdownText = `Losing ${percent}% of gold\nin ${goldLossCountdownValue} seconds`; // Keep as gold
+        let baseSize = lossCountdownTextSizeBase * currentScale;
+        let easeInOut = 0.5 - 0.5 * cos(goldLossCountdownAnimProgress * PI);
+        let currentScaleFactor = lerp(1.0, lossCountdownPulseScale, easeInOut);
+        let currentAlpha = lerp(150, 255, easeInOut);
+        let currentColor = lerpColor(color(greyishPurpleBase), color(greyishPurpleHighlight), easeInOut);
+        drawingContext.shadowBlur = max(6, 18 * currentScale) * easeInOut;
+        drawingContext.shadowColor = `rgba(${greyishPurpleHighlight[0]}, ${greyishPurpleHighlight[1]}, ${greyishPurpleHighlight[2]}, 0.7)`;
+        fill(currentColor.levels[0], currentColor.levels[1], currentColor.levels[2], currentAlpha);
+        textSize(baseSize * currentScaleFactor);
+        text(countdownText, gameAreaWidth / 2, scaledCanvasHeight / 2);
+        drawingContext.shadowBlur = 0;
+    } else if (goldLossMessageActive) {
+        let messageText = `-${goldLostAmountForDisplay} Gold`; // Keep as Gold
+        let baseSize = lossMessageTextSizeBase * currentScale;
+        let easeOutQuint = (x) => 1 - pow(1 - x, 5);
+        let progressEasedScale = easeOutQuint(goldLossMessageProgress);
+        let progressEasedAlpha = goldLossMessageProgress * goldLossMessageProgress;
+        let currentScaleFactor = lerp(lossMessageStartScale, 1.0, progressEasedScale);
+        let currentAlpha = lerp(255, 0, progressEasedAlpha);
+        let glowAmount = lerp(lossMessageGlowBlur * currentScale, 0, progressEasedAlpha);
+        fill(neonRed[0], neonRed[1], neonRed[2], currentAlpha);
+        drawingContext.shadowBlur = glowAmount;
+        drawingContext.shadowColor = `rgba(${neonRed[0]}, ${neonRed[1]}, ${neonRed[2]}, 0.7)`;
+        textSize(baseSize * currentScaleFactor);
+        text(messageText, gameAreaWidth / 2, scaledCanvasHeight / 2);
+        drawingContext.shadowBlur = 0;
+    }
+    pop();
+}
 function handlePowerupTimersAndVisuals() { push(); let time = millis() / 1000.0; noStroke(); let scaledBonusTextSize = max(20, 40 * currentScale); let scaledPowerupTextSize = scaledBonusTextSize * 0.9; let bonusY = scaledCanvasHeight / 2 - 100 * currentScale; let powerupOffsetY = scaledBonusTextSize * 1.2; let scaledShadowBlur = max(5, 15 * currentScale); textFont(titleFont); textAlign(CENTER, CENTER); if (bonusBallTimer > 0) { bonusBallTimer--; let alpha = map(bonusBallTimer, 0, bonusBallDuration, 0, 255); fill(bonusColor[0], bonusColor[1], bonusColor[2], alpha); textSize(scaledBonusTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${bonusColor[0]},${bonusColor[1]},${bonusColor[2]},${alpha / 255 * 0.7})`; text(bonusBallMessage, gameAreaWidth / 2, bonusY); drawingContext.shadowBlur = 0; } else { bonusBallMessage = ''; } let ddY = bonusY + powerupOffsetY; if (doubleDropMessageTimer > 0) { doubleDropMessageTimer--; let alpha = map(doubleDropMessageTimer, 0, powerupMessageDuration, 0, 255); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha); textSize(scaledPowerupTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${neonBlue[0]},${neonBlue[1]},${neonBlue[2]},${alpha / 255 * 0.7})`; text(doubleDropMessage, gameAreaWidth / 2, ddY); drawingContext.shadowBlur = 0; } else { doubleDropMessage = ''; } let dmY = bonusY + powerupOffsetY * (doubleDropMessageTimer > 0 ? 2 : 1); if (doubleMultiplierMessageTimer > 0) { doubleMultiplierMessageTimer--; let alpha = map(doubleMultiplierMessageTimer, 0, powerupMessageDuration, 0, 255); fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha); textSize(scaledPowerupTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${neonYellow[0]},${neonYellow[1]},${neonYellow[2]},${alpha / 255 * 0.7})`; text(doubleMultiplierMessage, gameAreaWidth / 2, dmY); drawingContext.shadowBlur = 0; } else { doubleMultiplierMessage = ''; } if (isDoubleDropActive && doubleDropTimer > 0) doubleDropTimer--; if (isDoubleMultiplierActive && doubleMultiplierTimer > 0) doubleMultiplierTimer--; if (isDoubleDropActive && doubleDropTimer <= 0) { isDoubleDropActive = false; } if (isDoubleMultiplierActive && doubleMultiplierTimer <= 0) { isDoubleMultiplierActive = false; } let scaledThicknessMin = max(1, 3 * currentScale); let scaledThicknessMax = max(3, 8 * currentScale); let scaledInset = 10 * currentScale; let scaledRectBorderRadius = max(2, 5 * currentScale); if (isDoubleDropActive) { let pulse = (sin(time * 8) + 1) / 2; let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax); let borderCol = lerpColor(color(neonBlue[0], neonBlue[1], neonBlue[2]), color(trueRed[0], trueRed[1], trueRed[2]), pulse); stroke(borderCol); strokeWeight(thickness); noFill(); rect(thickness / 2, thickness / 2, gameAreaWidth - thickness, scaledCanvasHeight - thickness, scaledRectBorderRadius); } if (isDoubleMultiplierActive) { let inset = isDoubleDropActive ? scaledInset : 0; let pulse = (sin(time * 6 + PI / 2) + 1) / 2; let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax); stroke(neonYellow[0], neonYellow[1], neonYellow[2], map(pulse, 0, 1, 150, 255)); strokeWeight(thickness); noFill(); rect(thickness / 2 + inset, thickness / 2 + inset, gameAreaWidth - thickness - inset * 2, scaledCanvasHeight - thickness - inset * 2, scaledRectBorderRadius); } noStroke(); pop(); }
 
 // --- Game State Management ---
@@ -1008,11 +1132,11 @@ function returnToLaunchMenuCleanup() {
     balls = []; activeParticles = []; activeRipples = []; backgroundRipples = []; recentHits = [];
     pegs.forEach(peg => { if (peg.plugin) peg.plugin.glowTimer = 0; });
     for (let i = 0; i < numSlots; i++) { slotBounceState[i] = 0; slotGlowState[i] = 0; histogramBarPulseState[i] = 0; slotHitCounts[i] = 0; }
-    isGameOverConditionMet = false; highScoreEnded = false; pointsLossFlashActive = false;
+    isGameOverConditionMet = false; highScoreEnded = false; goldLossFlashActive = false;
     isDoubleDropActive = false; doubleDropTimer = 0; doubleDropMessageTimer = 0;
     isDoubleMultiplierActive = false; doubleMultiplierTimer = 0; doubleMultiplierMessageTimer = 0;
-    bonusBallTimer = 0; isPointsLossCountdownActive = false; pointsLossMessageActive = false;
-    pointsLostAmountForDisplay = 0;
+    bonusBallTimer = 0; isGoldLossCountdownActive = false; goldLossMessageActive = false;
+    goldLostAmountForDisplay = 0;
     gameOverState = 'NONE'; leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
     hideLeaderboardForm();
     if (speedSlider) speedSlider.enabled = true;
@@ -1024,13 +1148,13 @@ function resetGame() {
     let bodiesToRemove = Composite.allBodies(world).filter(body => !body.isStatic && body.label === 'ball_regular');
     bodiesToRemove.forEach(body => { if (Composite.get(world, body.id, 'body')) { World.remove(world, body); } });
     balls = []; activeParticles = []; activeRipples = []; backgroundRipples = []; recentHits = [];
-    sessionScore = 0;
+    sessionScore = 0; // Reset total Points earned for Survival
     for (let i = 0; i < numSlots; i++) { slotBounceState[i] = 0; slotHitCounts[i] = 0; histogramBarPulseState[i] = 0; slotGlowState[i] = 0; }
     pegs.forEach(peg => { if (peg.plugin) peg.plugin.glowTimer = 0; });
     isDoubleDropActive = false; doubleDropTimer = 0; isDoubleMultiplierActive = false; doubleMultiplierTimer = 0;
     bonusBallMessage = ''; bonusBallTimer = 0; doubleDropMessage = ''; doubleDropMessageTimer = 0; doubleMultiplierMessage = ''; doubleMultiplierMessageTimer = 0;
-    highScoreEnded = false; isGameOverConditionMet = false; pointsLossFlashActive = false;
-    isPointsLossCountdownActive = false; pointsLossMessageActive = false; pointsLostAmountForDisplay = 0;
+    highScoreEnded = false; isGameOverConditionMet = false; goldLossFlashActive = false;
+    isGoldLossCountdownActive = false; goldLossMessageActive = false; goldLostAmountForDisplay = 0;
 
     // Reset slider values first
     if (speedSlider) speedSlider.value = defaultSpeedSliderDisplay;
@@ -1043,14 +1167,16 @@ function resetGame() {
 
     // Then set mode-specific settings
     if (currentGameMode === 'SURVIVAL') {
-        score = initialScoreSurvival; betAmount = minBetAmount;
+        score = initialScoreSurvival; // Starting Gold
+        betAmount = minBetAmount;
         survivalStartTime = millis(); lastDecayTime = survivalStartTime;
         currentDecayPercent = survivalInitialDecayPercent; nextDecayTime = survivalStartTime + survivalDecayStartDelay;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = true; }
         if (speedSlider) speedSlider.enabled = false; // Disable speed slider in Survival
         ballsRemaining = Infinity;
     } else if (currentGameMode === 'HIGHSCORE') {
-        score = 0; ballsRemaining = highScoreBallsTotal; betAmount = minBetAmount;
+        score = 0; // Starting Gold
+        ballsRemaining = highScoreBallsTotal; betAmount = minBetAmount;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = false; } // Disable bet slider in High Score
         if (speedSlider) speedSlider.enabled = true;  // Enable speed slider in High Score
         survivalStartTime = 0; lastDecayTime = 0; currentDecayPercent = 0; nextDecayTime = Infinity;
