@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v77.34 (Revert Specific 'Gold' to 'Points' & Increment Version)
+// P5.js + Matter.js "DROP" - v77.34 (Revert Specific 'Gold' to 'Points' & Increment Version)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
