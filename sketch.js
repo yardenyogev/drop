@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v77.42 (Adjust High Score UI Vertical Order & Increment Version)
+// P5.js + Matter.js Plinko Game: "DROP" - v77.44 (Admin Functions & Increment Version)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -24,13 +24,14 @@ let starfield = []; let shootingStars = [];
 const targetWidth = 1000; const targetHeight = 850;
 const baseCanvasWidth = 1000; const baseCanvasHeight = 850; const baseGameAreaWidth = 800; const baseMenuWidth = 200;
 const DEBUG_MODE = false; // Set to true for detailed console logs
-const numSlots = 17; const slotMultipliers = [50, 6, 3, 2, 1, 0.7, 0.5, 0.3, 0.2, 0.3, 0.5, 0.7, 1, 2, 3, 6, 50];
+const numSlots = 17;
+const slotMultipliers = [25, 6, 3, 2, 1, 0.7, 0.5, 0.3, 0.2, 0.3, 0.5, 0.7, 1, 2, 3, 6, 25];
 const basePegRadius = 4; const pegRowsTotal = 16; const baseStartYPegs = 110; const basePegSpacing = 45; const baseBallRadius = 7; const baseSlotHeight = 40; const baseDividerWidth = 2; const basePegSlotGap = 2;
 const funnelColor = [200, 200, 220, 150]; const bounceDuration = 15; const baseBounceAmplitude = 7;
 const initialScoreSurvival = 100; const highScoreBallsTotal = 20; const highScoreBallCost = 10; // Cost per ball in High Score
 const highScoreStartingGold = highScoreBallsTotal * highScoreBallCost; // Calculate starting gold
 const minBetAmount = 10;
-const maxBetAmount = 10000; // V77.19
+const maxBetAmount = 10000;
 const baseTitleY = 30; const baseTitleSize = 32; const baseUISideMargin = 15;
 const baseUIScoreTextSize = 13;
 const baseButtonTextSize = 9; const baseButtonWidth = 160; const baseButtonHeight = 40; const baseSlotTextSize = 8; const baseScoreY = 55; const baseMultiplierPanelTextSize = 14; const baseOddsDisplayTextSize = 7.5;
@@ -58,14 +59,14 @@ const baseMarkerSpeed = 2.5; const baseMarkerSize = 10;
 const survivalDecayStartDelay = 30000;
 const survivalDecayInterval = 30000;
 const survivalInitialDecayPercent = 0.10; const survivalDecayIncrement = 0.10;
-const survivalMaxDecayPercent = 1.0; // V77.20
-const pointsLossWarningStartTime = 5; const pointsLossFlashDurationFrames = 15; // Renamed internally but keeps name here for clarity
+const survivalMaxDecayPercent = 1.0;
+const pointsLossWarningStartTime = 5; const pointsLossFlashDurationFrames = 15;
 const lossCountdownTextSizeBase = 65; const lossCountdownPulseScale = 1.15;
 const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lossMessageDuration = 90; const lossMessageGlowBlur = 15;
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V77.42"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V77.44"; // <<< VERSION number incremented >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
@@ -82,6 +83,8 @@ const baseLeaderboardTitleSize = 28;
 const baseLeaderboardYOffset = 80;
 const baseLeaderboardEntrySpacing = 5;
 
+// Admin Constants
+const ADMIN_ADD_GOLD_AMOUNT = 1000; // Amount added with Shift+Ctrl+G
 
 // Global Variables
 let currentScale = 1; let scaledCanvasWidth, scaledCanvasHeight; let gameAreaWidth, menuWidth, menuStartX; let lastPegRowY; let slotStartY; let score = 0; // Represents Gold amount
@@ -94,7 +97,9 @@ let dropButtonY;
 let bonusBallMessage = '', bonusBallTimer = 0; let isDoubleDropActive = false, doubleDropTimer = 0; let isDoubleMultiplierActive = false, doubleMultiplierTimer = 0; let doubleDropMessage = '', doubleDropMessageTimer = 0; let doubleMultiplierMessage = '', doubleMultiplierMessageTimer = 0; let showTrails = false; let showAnalyzer = true; let blopSound, bonusSound, backgroundMusic; let sfxVolume = defaultSfxVolume;
 let musicVolume = defaultMusicVolume;
 let audioStarted = false;
-let isGameOverConditionMet = false; let goldLossFlashActive = false; let goldLossFlashEndFrame = 0;
+let isGameOverConditionMet = false;
+let isGameOverFromDecay = false;
+let goldLossFlashActive = false; let goldLossFlashEndFrame = 0;
 let markerX, markerY, markerMinX, markerMaxX, markerSpeed, markerDirection = 1, markerSize; let ballsRemaining = 0; let highScoreEnded = false;
 let survivalStartTime = 0; let lastDecayTime = 0; let currentDecayPercent = 0; let nextDecayTime = Infinity;
 let isGoldLossCountdownActive = false; let goldLossCountdownValue = 0; let goldLossCountdownAnimProgress = 0;
@@ -129,7 +134,7 @@ function calculateLayout(w, h) {
         betSlider.x = sliderX;
         betSlider.y = currentContentOriginY;
         betSlider.minVal = minBetAmount;
-        betSlider.maxVal = maxBetAmount; // V77.19
+        betSlider.maxVal = maxBetAmount;
         let betSliderTrackY = betSlider.y + 25 * currentScale;
         oddsDisplayYLine1 = betSliderTrackY + baseOddsDisplayYOffsetFromTrack * currentScale;
         oddsLineSpacing = baseOddsLineSpacing * currentScale;
@@ -293,7 +298,7 @@ function setup() {
     activeParticles = []; activeRipples = []; backgroundRipples = []; recentHits = [];
     showAnalyzer = true;
     for (let i = 0; i < numSlots; i++) { slotHitCounts[i] = 0; slotBounceState[i] = 0; histogramBarPulseState[i] = 0; slotGlowState[i] = 0; }
-    speedSlider = { value: defaultSpeedSliderDisplay, minVal: minSpeedSliderDisplayValue, maxVal: maxSpeedSliderDisplayValue, label: "Speed", dragging: false, enabled: true };
+    speedSlider = { value: defaultSpeedSliderDisplay, minVal: minSpeedSliderDisplayValue, maxVal: maxSpeedSliderDisplayValue, label: "Speed", dragging: false, enabled: true }; // Start enabled by default
     betSlider = { value: minBetAmount, minVal: minBetAmount, maxVal: maxBetAmount, label: "Bet Amount", dragging: false, enabled: true };
     ballSizeSlider = { value: currentBallRadius, minVal: minBallRadius, maxVal: maxBallRadius, label: "Ball Size", dragging: false, enabled: true };
     sfxVolumeSlider = { value: sfxVolume, minVal: 0.0, maxVal: 1.0, label: "SFX Volume", dragging: false, enabled: true };
@@ -505,36 +510,53 @@ function drawCurrentState() {
         pop();
     }
 
-    // Game Over Condition Checking
+    // Game Over Condition Checking & Transition
     if (gameState === 'PLAYING' && !isGameOverConditionMet) {
-        if (currentGameMode === 'HIGHSCORE' && ballsRemaining <= 0 && balls.length === 0) { isGameOverConditionMet = true; highScoreEnded = true; }
-        else if (currentGameMode === 'SURVIVAL' && score < minBetAmount && balls.length === 0) { isGameOverConditionMet = true; } // Check if enough Gold for minimum bet
-        else if (currentGameMode === 'SURVIVAL' && score <= 0 && balls.length === 0 ) { isGameOverConditionMet = true; }
+        if (currentGameMode === 'HIGHSCORE' && ballsRemaining <= 0 && balls.length === 0) {
+            isGameOverConditionMet = true;
+            highScoreEnded = true;
+        } else if (currentGameMode === 'SURVIVAL' && score < minBetAmount && balls.length === 0) {
+            isGameOverConditionMet = true;
+        } else if (currentGameMode === 'SURVIVAL' && score <= 0 && balls.length === 0) {
+            isGameOverConditionMet = true;
+        }
+        // The 100% decay check happens in handleSurvivalDecay
     }
-    // Transition TO GAME_OVER state
-    if (isGameOverConditionMet && balls.length === 0 && gameState === 'PLAYING') {
-        if (score < 0) score = 0; // Ensure gold isn't negative
-        startTransition('GAME_OVER', () => {
-             gameState = 'GAME_OVER';
-             gameOverState = 'SHOWING_FORM';
-             leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
-             // Submit 'highScorePoints' for High Score, 'sessionScore' (total points earned) for Survival
-             let scoreToSubmit = (currentGameMode === 'HIGHSCORE') ? highScorePoints : sessionScore;
-             const form = document.getElementById('leaderboard-form');
-             if(form) {
-                showLeaderboardForm(scoreToSubmit, currentGameMode.toLowerCase());
-             } else {
-                 console.error("Cannot show leaderboard form - element not found!");
-                 gameOverState = 'SHOWING_LEADERBOARD';
-                 fetchLeaderboardData(); // Attempt to show leaderboard even if form fails
-             }
-        });
+
+    // Transition TO GAME_OVER state if condition met
+    if (isGameOverConditionMet && gameState === 'PLAYING') {
+        let transitionNow = false;
+        if (isGameOverFromDecay) {
+             transitionNow = true;
+             if (DEBUG_MODE) console.log("Transitioning to GAME OVER due to 100% decay.");
+        } else if (balls.length === 0) {
+             transitionNow = true;
+             if (DEBUG_MODE) console.log("Transitioning to GAME OVER (balls cleared).");
+        }
+
+        if (transitionNow) {
+             if (score < 0) score = 0;
+             startTransition('GAME_OVER', () => {
+                 gameState = 'GAME_OVER';
+                 gameOverState = 'SHOWING_FORM';
+                 leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
+                 let scoreToSubmit = (currentGameMode === 'HIGHSCORE') ? highScorePoints : sessionScore;
+                 const form = document.getElementById('leaderboard-form');
+                 if(form) {
+                    showLeaderboardForm(scoreToSubmit, currentGameMode.toLowerCase());
+                 } else {
+                     console.error("Cannot show leaderboard form - element not found!");
+                     gameOverState = 'SHOWING_LEADERBOARD';
+                     fetchLeaderboardData();
+                 }
+             });
+             isGameOverFromDecay = false;
+        }
     }
 }
 
 
 // ============================ Transition Functions ============================
-// ... (no changes needed here) ...
 function startTransition(targetState, callback = null) {
     if (transitionState !== 'NONE') return;
     transitionTargetState = targetState;
@@ -542,7 +564,7 @@ function startTransition(targetState, callback = null) {
     transitionState = 'FADING_OUT';
     transitionProgress = 0;
     if (launchMenuDiv && launchMenuDiv.style('display') !== 'none') { launchMenuDiv.hide(); }
-    if(gameState === 'GAME_OVER' || gameOverState === 'SHOWING_FORM') { // Ensure form is hidden when transitioning away from game over
+    if(gameState === 'GAME_OVER' || gameOverState === 'SHOWING_FORM') {
         hideLeaderboardForm();
     }
 }
@@ -554,33 +576,28 @@ function handleTransition() {
     if (transitionState === 'FADING_OUT') {
         if (transitionProgress >= 1) {
             let previousGameState = gameState;
-            gameState = 'PREPARING'; // Intermediate state
-            if (transitionCallback) { transitionCallback(); } // Execute callback (e.g., resetGame)
-            if (gameState === 'PREPARING') { gameState = transitionTargetState; } // Set final state
+            gameState = 'PREPARING';
+            if (transitionCallback) { transitionCallback(); }
+            if (gameState === 'PREPARING') { gameState = transitionTargetState; }
             transitionState = 'FADING_IN';
-            transitionProgress = 0; // Reset for fade-in
-            // Special handling for entering launch menu
+            transitionProgress = 0;
             if (gameState === 'LAUNCH_MENU') {
                 if (launchMenuDiv) { calculateLayout(windowWidth, windowHeight); launchMenuDiv.show(); launchMenuDiv.style('opacity', '0'); }
                 menuAlpha = 0;
             }
-            // Hide form if we faded out from GAME_OVER and aren't fading back to it
             if(previousGameState === 'GAME_OVER' && gameState !== 'GAME_OVER') { hideLeaderboardForm(); }
         }
     } else if (transitionState === 'FADING_IN') {
-        // Handle launch menu fade-in
         if (gameState === 'LAUNCH_MENU' && launchMenuDiv) {
              let currentOpacity = map(transitionProgress, 0, 1, 0, 1);
              launchMenuDiv.style('opacity', currentOpacity);
              menuAlpha = currentOpacity * 255;
         }
-        // Check if fade-in is complete
         if (transitionProgress >= 1) {
             transitionState = 'NONE';
             transitionProgress = 0;
             transitionTargetState = '';
             transitionCallback = null;
-             // Ensure launch menu is fully opaque
              if (gameState === 'LAUNCH_MENU' && launchMenuDiv) { launchMenuDiv.style('opacity', '1'); menuAlpha = 255; }
         }
     }
@@ -594,17 +611,15 @@ function drawTransitionOverlay() {
 }
 
 // ============================ Mode Selection & Start ============================
-// ... (no changes needed here) ...
 function selectSurvivalMode() { currentGameMode = 'SURVIVAL'; prepareGameForMode(); }
 function selectHighScoreMode() { currentGameMode = 'HIGHSCORE'; prepareGameForMode(); }
 function prepareGameForMode() { if (!currentGameMode) { console.error("Cannot prepare game: No mode selected!"); startTransition('LAUNCH_MENU', returnToLaunchMenuCleanup); return; } isGameOverConditionMet = false; highScoreEnded = false; resetGame(); }
 
 
 // ============================ Helper Functions ============================
-// ... (no changes needed here) ...
+// (No changes in this section)
 
 // ============================ Starfield & Effects Setup / Drawing ============================
-// ... (no changes needed here) ...
 function setupMenuEffects() { colorMode(RGB, 255); parallaxLayers = []; let baseRadius = basePegRadius * currentScale * 1.5; for (let i = 0; i < parallaxLayersCount; i++) { let layer = []; let layerRadius = baseRadius * (1 - i * 0.2); for (let j = 0; j < parallaxPegsPerLayer; j++) { layer.push({ x: random(scaledCanvasWidth), y: random(scaledCanvasHeight), radius: layerRadius }); } parallaxLayers.push(layer); } menuParticles = []; const scaledParticleSpeed = menuParticleBaseSpeed * currentScale; for (let i = 0; i < menuParticleCount; i++) { menuParticles.push({ x: random(scaledCanvasWidth), y: random(scaledCanvasHeight), vx: random(-scaledParticleSpeed, scaledParticleSpeed), vy: random(-scaledParticleSpeed, scaledParticleSpeed), lifespan: random(menuParticleLifespan * 0.5, menuParticleLifespan), maxLifespan: menuParticleLifespan, radius: random(1, 3) * currentScale, color: [random(150, 255), random(150, 255), random(220, 255)] }); } menuFallingBalls = []; let scaledBallRad = baseBallRadius * currentScale * 0.8; let baseFallingColor = color(neonBlue[0], neonBlue[1], neonBlue[2]); colorMode(HSB, 360, 100, 100, 1); for (let i = 0; i < menuFallingBallCount; i++) { let h = hue(baseFallingColor) + random(-15, 15); let s = saturation(baseFallingColor) * random(0.85, 1.0); let b = brightness(baseFallingColor) * random(0.9, 1.1); let a = random(0.2, 0.6); let variedColor = color(h, s, b, a); colorMode(RGB, 255); menuFallingBalls.push({ x: random(scaledCanvasWidth), y: random(-scaledCanvasHeight * 0.5, 0), vy: random(menuBackgroundBallSpeedMin, menuBackgroundBallSpeedMax) * currentScale, radius: scaledBallRad * random(0.7, 1.1), color: variedColor }); } colorMode(RGB, 255); }
 function drawMenuBackgroundEffects(overallAlpha) { if (overallAlpha <= 0) return; push(); let centerX = scaledCanvasWidth / 2; let centerY = scaledCanvasHeight / 2; let mouseXConstrained = constrain(mouseX, 0, width); let mouseYConstrained = constrain(mouseY, 0, height); let mouseOffsetX = (mouseXConstrained - centerX) * parallaxMaxOffsetFactor; let mouseOffsetY = (mouseYConstrained - centerY) * parallaxMaxOffsetFactor; noStroke(); for (let i = 0; i < parallaxLayers.length; i++) { let layer = parallaxLayers[i]; let layerFactor = (parallaxLayers.length - i) / parallaxLayers.length; let currentOffsetX = mouseOffsetX * layerFactor; let currentOffsetY = mouseOffsetY * layerFactor; let layerAlpha = 100 * (1 - i * 0.2); fill(180, 200, 220, layerAlpha * (overallAlpha / 255)); for (let peg of layer) { ellipse(peg.x + currentOffsetX, peg.y + currentOffsetY, peg.radius * 2); } } noStroke(); let scaledParticleSpeed = menuParticleBaseSpeed * currentScale; for (let i = menuParticles.length - 1; i >= 0; i--) { let p = menuParticles[i]; if (overallAlpha > 10) { p.x += p.vx; p.y += p.vy; p.lifespan--; } if (p.x < -p.radius) p.x = scaledCanvasWidth + p.radius; if (p.x > scaledCanvasWidth + p.radius) p.x = -p.radius; if (p.y < -p.radius) p.y = scaledCanvasHeight + p.radius; if (p.y > scaledCanvasHeight + p.radius) p.y = -p.radius; if (p.lifespan <= 0) { p.x = random(scaledCanvasWidth); p.y = random(scaledCanvasHeight); p.vx = random(-scaledParticleSpeed, scaledParticleSpeed); p.vy = random(-scaledParticleSpeed, scaledParticleSpeed); p.lifespan = random(menuParticleLifespan * 0.5, menuParticleLifespan); } else { let lifeRatio = p.lifespan / p.maxLifespan; let particleAlpha = 150 * sin(lifeRatio * PI); fill(p.color[0], p.color[1], p.color[2], particleAlpha * (overallAlpha / 255)); ellipse(p.x, p.y, p.radius * 2); } } noStroke(); let gravityEffect = menuBackgroundBallGravity * currentScale; for (let i = menuFallingBalls.length - 1; i >= 0; i--) { let ball = menuFallingBalls[i]; if (overallAlpha > 10) { ball.vy += gravityEffect; ball.y += ball.vy; } let r = red(ball.color); let g = green(ball.color); let b = blue(ball.color); let baseAlpha = alpha(ball.color); fill(r, g, b, baseAlpha * 255 * (overallAlpha / 255)); ellipse(ball.x, ball.y, ball.radius * 2); if (ball.y > scaledCanvasHeight + ball.radius * 2) { ball.x = random(scaledCanvasWidth); ball.y = -ball.radius * 2 - random(50 * currentScale); ball.vy = random(menuBackgroundBallSpeedMin, menuBackgroundBallSpeedMax) * currentScale; } } pop(); }
 function setupStarfield() { starfield = []; shootingStars = []; colorMode(HSB, 360, 100, 100, 1); for (let i = 0; i < numStars; i++) { let size = random(0.8, 3.8) * currentScale; let depth = map(size, 0.8 * currentScale, 3.8 * currentScale, 0.1, 1.0); let speedMult = lerp(1.0, 1.0 + baseStarParallaxFactor, depth); starfield.push({ x: random(gameAreaWidth), y: random(scaledCanvasHeight), size: size, depth: depth, brightness: random(60, 100), alpha: random(0.45, 1.0), base_vx: random(-0.1, 0.1) * starfieldSpeedFactor * currentScale * speedMult, base_vy: random(0.05, 0.2) * starfieldSpeedFactor * currentScale * speedMult, h: random(240, 300), s: random(50, 90), twinkleOffset: random(TWO_PI) }); } colorMode(RGB, 255); }
@@ -617,144 +632,56 @@ function createBackgroundRipple(centerX, centerY) { const scaledPegRadius = base
 function updateAndDrawBackgroundRipples() { push(); noFill(); for (let i = backgroundRipples.length - 1; i >= 0; i--) { let r = backgroundRipples[i]; r.lifespan--; if (r.lifespan <= 0) { backgroundRipples.splice(i, 1); } else { let progress = 1.0 - (r.lifespan / r.maxLifespan); let easedProgressRadius = 1 - pow(1 - progress, 3); r.radius = lerp(r.initialRadius, r.maxRadius, easedProgressRadius); let easedProgressAlpha = pow(progress, 2); r.alpha = lerp(r.initialAlpha, 0, easedProgressAlpha); r.strokeWeight = lerp(r.strokeWeightStart, r.strokeWeightEnd, progress); if (r.alpha > 1 && r.strokeWeight > 0.1) { stroke(r.color[0], r.color[1], r.color[2], r.alpha); strokeWeight(r.strokeWeight); ellipse(r.cx, r.cy, r.radius * 2); } } } noStroke(); pop(); }
 
 // ============================ Drawing Helpers ============================
-// ... (no changes needed here) ...
 function drawPegs() { push(); const scaledPegRadius = basePegRadius * currentScale; const glowSize = scaledPegRadius * basePegGlowSizeIncrease; const scaledBaseShadowBlur = basePegShadowBlur * currentScale; noStroke(); for (let peg of pegs) { if (!Composite.get(world, peg.id, 'body')) continue; let currentRadius = scaledPegRadius; let currentShadowColor = 'rgba(180, 220, 255, 0.5)'; let currentShadowBlur = scaledBaseShadowBlur; let baseColor = color(255, 255, 255, 230); if (peg.plugin?.glowTimer > 0) { let glowProgress = map(peg.plugin.glowTimer, pegGlowDuration, 0, 1, 0); currentRadius = lerp(scaledPegRadius, glowSize, glowProgress); fill(255, 255, 255, lerp(230, 255, glowProgress)); currentShadowBlur = lerp(scaledBaseShadowBlur, max(10, 20 * currentScale), glowProgress); currentShadowColor = `rgba(255, 255, 255, ${lerp(0.5, 0.9, glowProgress)})`; peg.plugin.glowTimer--; } else { fill(baseColor); } drawingContext.shadowBlur = currentShadowBlur; drawingContext.shadowColor = currentShadowColor; ellipse(peg.position.x, peg.position.y, currentRadius * 2); drawingContext.shadowBlur = 0; } drawingContext.shadowBlur = 0; pop(); }
 function drawBalls() { push(); const scaledBallRadius = currentBallRadius * currentScale; for (let i = balls.length - 1; i >= 0; i--) { let ball = balls[i]; if (!Composite.get(world, ball.id, 'body')) { console.warn(`Ball body ${ball.id} not found in world, removing from drawing array.`); balls.splice(i, 1); continue; } if (showTrails && ball.plugin?.path?.length > 1) { push(); noFill(); let ballColor = color(neonBlue[0], neonBlue[1], neonBlue[2]); let transparentColor = color(neonBlue[0], neonBlue[1], neonBlue[2], 0); for (let j = 1; j < ball.plugin.path.length; j++) { let segmentRatio = (j - 1) / (ball.plugin.path.length - 2 || 1); let currentAlpha = lerp(trailEndAlpha, trailStartAlpha, segmentRatio); let currentWeight = lerp(trailEndWeightFactor, trailStartWeightFactor, segmentRatio); currentWeight *= scaledBallRadius * 2; currentWeight = max(1, currentWeight); stroke(ballColor.levels[0], ballColor.levels[1], ballColor.levels[2], currentAlpha); strokeWeight(currentWeight); strokeCap(ROUND); line(ball.plugin.path[j - 1].x, ball.plugin.path[j - 1].y, ball.plugin.path[j].x, ball.plugin.path[j].y); } pop(); } let ballDrawColor = neonBlue; let glowColor = 'rgba(100, 220, 255, 0.7)'; push(); translate(ball.position.x, ball.position.y); rotate(ball.angle); fill(ballDrawColor[0], ballDrawColor[1], ballDrawColor[2]); noStroke(); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = glowColor; ellipse(0, 0, scaledBallRadius * 2); drawingContext.shadowBlur = 0; pop(); if (ball.position.y > scaledCanvasHeight + scaledBallRadius * 5 || ball.position.x < -scaledBallRadius * 5 || ball.position.x > gameAreaWidth + scaledBallRadius * 5) { if (DEBUG_MODE) console.log(`Removing off-screen ball ${ball.id}`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } balls.splice(i, 1); } } pop(); }
 function drawFunnels() { push(); if (!slotStartY || !dividers || dividers.length < numSlots + 1) { pop(); return; } const funnelTopActualY = slotStartY - 5 * currentScale; const scaledSlotHeight = baseSlotHeight * currentScale; stroke(funnelColor[0], funnelColor[1], funnelColor[2], funnelColor[3]); strokeWeight(max(1, 1.5 * currentScale)); for (let i = 1; i < dividers.length - 1; i++) { if (!dividers[i] || !dividers[i].position) continue; line(dividers[i].position.x, funnelTopActualY, dividers[i].position.x, slotStartY + scaledSlotHeight); } pop(); }
 function drawMultiplierPanel() { push(); const panelX = multiplierPanelX; const panelY = multiplierPanelY; const panelW = multiplierPanelWidth; const panelH = multiplierPanelHeight; const itemH = multiplierPanelItemHeight; const itemS = multiplierPanelItemSpacing; const borderRadius = multiplierPanelBorderRadius; const txtSize = multiplierPanelTextSize; let hasVisibleHits = false; for (let i = 0; i < recentHits.length; i++) { let hit = recentHits[i]; let age = frameCount - hit.timestamp; if (age <= multiplierDisplayDuration) { hasVisibleHits = true; break; } } if (!hasVisibleHits) { for (let i = recentHits.length - 1; i >= 0; i--) { if (frameCount - recentHits[i].timestamp > multiplierDisplayDuration) { recentHits.splice(i, 1); } } pop(); return; } let currentY = panelY + itemS; const panelBottomBoundary = panelY + panelH - itemS; let maxItemsToShow = floor((panelH - itemS * 2) / (itemH + itemS)); maxItemsToShow = max(0, maxItemsToShow); let startIndex = max(0, recentHits.length - maxItemsToShow); for (let i = recentHits.length - 1; i >= startIndex; i--) { let hit = recentHits[i]; let age = frameCount - hit.timestamp; if (age > multiplierDisplayDuration) continue; let fadeProgress = age / multiplierDisplayDuration; let alpha = 255 * (1 - fadeProgress * fadeProgress); alpha = constrain(alpha, 0, 255); if (alpha > 5) { if (currentY + itemH > panelBottomBoundary) { break; } fill(multiplierDisplayOrange[0], multiplierDisplayOrange[1], multiplierDisplayOrange[2], alpha * 0.9); noStroke(); rect(panelX + itemS, currentY, panelW - 2 * itemS, itemH, borderRadius * 0.7); fill(255, 255, 255, alpha); textFont(uiFont); textSize(txtSize); textAlign(CENTER, CENTER); let multValue = hit.value; let decimals = (abs(multValue) < 1 && multValue !== 0) ? 1 : 0; let multText = nf(multValue, 0, decimals) + 'x'; text(multText, panelX + panelW / 2, currentY + itemH / 2 + (1 * currentScale)); currentY += (itemH + itemS); } } for (let i = recentHits.length - 1; i >= 0; i--) { if (frameCount - recentHits[i].timestamp > multiplierDisplayDuration) { recentHits.splice(i, 1); } } pop(); }
 function drawPowerupTimer() { push(); if (!isDoubleDropActive && !isDoubleMultiplierActive) { pop(); return; } let maxTimeFrames = 0; if (isDoubleDropActive) maxTimeFrames = max(maxTimeFrames, doubleDropTimer); if (isDoubleMultiplierActive) maxTimeFrames = max(maxTimeFrames, doubleMultiplierTimer); let secondsLeft = ceil(maxTimeFrames / 60.0); if (secondsLeft <= 0) { pop(); return; } let powerupLabel = ""; if (isDoubleDropActive && isDoubleMultiplierActive) { powerupLabel = (doubleDropTimer > doubleMultiplierTimer) ? "Double Drop" : "2x Multiplier"; } else if (isDoubleDropActive) { powerupLabel = "Double Drop"; } else if (isDoubleMultiplierActive) { powerupLabel = "2x Multiplier"; } let timerText = `${powerupLabel}: ${secondsLeft}s`; let displayX = powerupTimerDisplayX; let displayY = powerupTimerDisplayY; let flickerColor = random(powerupTimerFlickerColors); textFont(uiFont); textSize(timerTextSize); textAlign(LEFT, TOP); let glowAmount = max(4, 12 * currentScale); drawingContext.shadowBlur = glowAmount; drawingContext.shadowColor = `rgba(${flickerColor[0]}, ${flickerColor[1]}, ${flickerColor[2]}, 0.7)`; fill(flickerColor); noStroke(); text(timerText, displayX, displayY); drawingContext.shadowBlur = 0; pop(); }
-function drawSlots() { push(); const scaledSlotTextSize = max(6, baseSlotTextSize * currentScale); const scaledSlotHeight = baseSlotHeight * currentScale; let scaledBounceAmplitude = bounceAmplitude; textFont(slotFont); if (!dividers || dividers.length !== numSlots + 1) { pop(); return; } if (typeof slotStartY === 'undefined') { pop(); return; } for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1] || !dividers[i].position || !dividers[i+1].position) { continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let currentSlotWidth = dividerRightX - dividerLeftX; if (currentSlotWidth <= 0) { currentSlotWidth = 1; } let slotX = slotCenterX - currentSlotWidth / 2; let slotY = slotStartY; let bounceOffsetY = 0; if (slotBounceState[i] > 0) { let bounceProgress = map(slotBounceState[i], bounceDuration, 0, 0, PI); bounceOffsetY = scaledBounceAmplitude * sin(bounceProgress); slotBounceState[i]--; } let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(50 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let slotColor; if (colorFactor < 0.5) { slotColor = lerpColor(color(255, 255, 0), color(255, 165, 0), map(colorFactor, 0, 0.5, 0, 1)); } else { slotColor = lerpColor(color(255, 165, 0), color(200, 0, 0), map(colorFactor, 0.5, 1, 0, 1)); } fill(slotColor); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); if (slotGlowState[i] > 0) { let glowProgress = map(slotGlowState[i], slotGlowDuration, 0, 1, 0); let glowAlpha = map(pow(glowProgress, 0.5), 1, 0, slotGlowMaxAlpha, 0); fill(slotGlowColor[0], slotGlowColor[1], slotGlowColor[2], glowAlpha); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); slotGlowState[i]--; } let brightnessValue = (red(slotColor) * 299 + green(slotColor) * 587 + blue(slotColor) * 114) / 1000; let textColor = brightnessValue > 125 ? color(0) : color(255); fill(textColor); textAlign(CENTER, CENTER); let currentMultiplier = baseMultiplier; if (currentGameMode === 'SURVIVAL' && isDoubleMultiplierActive) { currentMultiplier *= 2; } let multiplierText = nf(currentMultiplier, 0, (currentMultiplier < 1 && currentMultiplier !== 0) ? 1 : 0) + 'x'; let textY = (slotY + scaledSlotHeight / 2) - bounceOffsetY; textSize(scaledSlotTextSize); text(multiplierText, slotCenterX, textY); } pop(); }
+function drawSlots() { push(); const scaledSlotTextSize = max(6, baseSlotTextSize * currentScale); const scaledSlotHeight = baseSlotHeight * currentScale; let scaledBounceAmplitude = bounceAmplitude; textFont(slotFont); if (!dividers || dividers.length !== numSlots + 1) { pop(); return; } if (typeof slotStartY === 'undefined') { pop(); return; } for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1] || !dividers[i].position || !dividers[i+1].position) { continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let currentSlotWidth = dividerRightX - dividerLeftX; if (currentSlotWidth <= 0) { currentSlotWidth = 1; } let slotX = slotCenterX - currentSlotWidth / 2; let slotY = slotStartY; let bounceOffsetY = 0; if (slotBounceState[i] > 0) { let bounceProgress = map(slotBounceState[i], bounceDuration, 0, 0, PI); bounceOffsetY = scaledBounceAmplitude * sin(bounceProgress); slotBounceState[i]--; } let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(25 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let slotColor; if (colorFactor < 0.5) { slotColor = lerpColor(color(255, 255, 0), color(255, 165, 0), map(colorFactor, 0, 0.5, 0, 1)); } else { slotColor = lerpColor(color(255, 165, 0), color(200, 0, 0), map(colorFactor, 0.5, 1, 0, 1)); } fill(slotColor); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); if (slotGlowState[i] > 0) { let glowProgress = map(slotGlowState[i], slotGlowDuration, 0, 1, 0); let glowAlpha = map(pow(glowProgress, 0.5), 1, 0, slotGlowMaxAlpha, 0); fill(slotGlowColor[0], slotGlowColor[1], slotGlowColor[2], glowAlpha); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); slotGlowState[i]--; } let brightnessValue = (red(slotColor) * 299 + green(slotColor) * 587 + blue(slotColor) * 114) / 1000; let textColor = brightnessValue > 125 ? color(0) : color(255); fill(textColor); textAlign(CENTER, CENTER); let currentMultiplier = baseMultiplier; if (currentGameMode === 'SURVIVAL' && isDoubleMultiplierActive) { currentMultiplier *= 2; } let multiplierText = nf(currentMultiplier, 0, (currentMultiplier < 1 && currentMultiplier !== 0) ? 1 : 0) + 'x'; let textY = (slotY + scaledSlotHeight / 2) - bounceOffsetY; textSize(scaledSlotTextSize); text(multiplierText, slotCenterX, textY); } pop(); }
 function drawTitle() { push(); textFont(titleFont); textSize(titleSize); textAlign(CENTER, TOP); let titleText = "DROP"; let x = gameAreaWidth / 2; let y = titleY; let offset = titleSize * 0.03; fill(titleColorShadow[0], titleColorShadow[1], titleColorShadow[2], 180); text(titleText, x + offset, y + offset); let grad = drawingContext.createLinearGradient(x - titleSize, y, x + titleSize, y + titleSize); grad.addColorStop(0, `rgb(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]})`); grad.addColorStop(0.5, `rgb(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]})`); grad.addColorStop(1, `rgb(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]})`); drawingContext.fillStyle = grad; text(titleText, x, y); fill(titleColorHighlight[0], titleColorHighlight[1], titleColorHighlight[2], 100); text(titleText, x - offset * 0.5, y - offset * 0.5); pop(); }
 function drawLaunchTitle(alpha) { if (alpha <= 0) return; push(); let launchTitleSize = titleSize * 2.0; textFont(titleFont); textSize(launchTitleSize); textAlign(CENTER, CENTER); let titleText = "DROP"; let x = scaledCanvasWidth / 2; let y = scaledCanvasHeight * 0.3; let baseOffset = launchTitleSize * 0.035; let numLayers = 5; let liquidSpeed = 0.03; let liquidShiftAmount = launchTitleSize * 0.1; let highlightShift = sin(frameCount * liquidSpeed) * liquidShiftAmount; for (let i = numLayers; i >= 1; i--) { let layerOffset = baseOffset * i; let layerAlphaMultiplier = pow((numLayers - i) / numLayers, 1.5); let shadowIntensity = map(i, 1, numLayers, 0.5, 0.9); fill( titleColorShadow[0] * shadowIntensity, titleColorShadow[1] * shadowIntensity, titleColorShadow[2] * shadowIntensity, 190 * layerAlphaMultiplier * (alpha / 255) ); text(titleText, x + layerOffset, y + layerOffset); } let grad = drawingContext.createLinearGradient( x - launchTitleSize * 0.6 + highlightShift, y - launchTitleSize * 0.4, x + launchTitleSize * 0.6 + highlightShift, y + launchTitleSize * 0.4 ); let hRGBA = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.9 * alpha / 255})`; let bRGBA = `rgba(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]}, ${1.0 * alpha / 255})`; let mSR = lerp(titleColorShadow[0], titleColorBase[0], 0.4); let mSG = lerp(titleColorShadow[1], titleColorBase[1], 0.4); let mSB = lerp(titleColorShadow[2], titleColorBase[2], 0.4); let mSRGBA = `rgba(${mSR}, ${mSG}, ${mSB}, ${1.0 * alpha / 255})`; let sRGBA = `rgba(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]}, ${0.8 * alpha / 255})`; grad.addColorStop(0, hRGBA); grad.addColorStop(0.4, bRGBA); grad.addColorStop(0.8, mSRGBA); grad.addColorStop(1, sRGBA); drawingContext.fillStyle = grad; text(titleText, x, y); let glowBlur = max(5, 25 * currentScale) * (alpha / 255); let glowColor = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.5 * (alpha / 255)})`; drawingContext.shadowBlur = glowBlur; drawingContext.shadowColor = glowColor; drawingContext.fillStyle = grad; text(titleText, x, y); drawingContext.shadowBlur = 0; drawingContext.shadowColor = 'rgba(0,0,0,0)'; pop(); }
 function drawEnhancedUIText(txt, x, y, size, fillColor = color(230), align = LEFT) { push(); textFont(uiFont); textSize(size); textAlign(align, TOP); fill(uiTextOutlineColor[0], uiTextOutlineColor[1], uiTextOutlineColor[2], uiTextOutlineColor[3]); let outlineOffset = max(1, 1.5 * currentScale); text(txt, x + outlineOffset, y + outlineOffset); drawingContext.shadowBlur = 0; fill(fillColor); text(txt, x, y); pop(); }
-function drawGameUI() { push(); textFont(uiFont); fill(230, 230, 240, 220); textAlign(LEFT, TOP); let textX = uiSideMargin; let currentTextY = scoreY; // Base Y for left side Gold text
- let lineHeight = uiScoreTextSize * 1.5; let scoreColor = color(230, 230, 240, 220);
-
-    // Check if the Gold Loss flash should be active (only relevant for Survival)
-    if (currentGameMode === 'SURVIVAL' && goldLossFlashActive) {
-        let flashProgress = (goldLossFlashEndFrame - frameCount) / pointsLossFlashDurationFrames;
-        let flashSin = sin(flashProgress * PI);
-        scoreColor = lerpColor(color(230, 230, 240, 220), color(brightRed[0], brightRed[1], brightRed[2]), flashSin);
-    }
-    // Display Gold amount (left side)
-    let goldText = `Gold: ${floor(score)}`;
-    drawEnhancedUIText(goldText, textX, currentTextY, uiScoreTextSize, scoreColor, LEFT);
-
-    // --- Right Side Text (Mode Dependent) ---
-    let rightSideY1 = scoreY; // Base Y for top line on right side
-    let rightSideY2 = scoreY + uiScoreTextSize + (3 * currentScale); // Base Y for potential second line on right
-
-    if (currentGameMode === 'HIGHSCORE') {
-        // <<< SWAPPED ORDER AND POSITIONING >>>
-        // Top line: Total points earned (Positioned above Balls Left)
-        let totalPointsY = rightSideY1 - uiScoreTextSize - (3 * currentScale); // Calculate position above Balls Left
-        let highScorePointsText = `Total points earned: ${highScorePoints}`;
-        drawEnhancedUIText(highScorePointsText, gameAreaWidth - uiSideMargin, totalPointsY, uiScoreTextSize, color(230), RIGHT);
-
-        // Bottom line: Balls Left (Aligned vertically with Gold text)
-        let ballsLeftY = rightSideY1; // Align with Gold Y
-        let ballsLeftText = `Balls Left: ${ballsRemaining}`;
-        drawEnhancedUIText(ballsLeftText, gameAreaWidth - uiSideMargin, ballsLeftY, uiScoreTextSize, color(230), RIGHT);
-
-    } else if (currentGameMode === 'SURVIVAL') {
-        // Only display Total Points Earned on the top line
-        let survivalPointsText = `Total Points Earned: ${sessionScore}`;
-        drawEnhancedUIText(survivalPointsText, gameAreaWidth - uiSideMargin, rightSideY1, uiScoreTextSize, color(230), RIGHT);
-    }
-    // --- End Right Side Text ---
-
-    // Draw Survival Decay Info below Gold amount
-    if (currentGameMode === 'SURVIVAL') {
-        let decayTextY = scoreY + uiScoreTextSize + (5 * currentScale); // Position below Gold
-        let decayInfoText = "";
-        let showLossText = true;
-        let now = millis();
-        let timeToNext = nextDecayTime - now;
-        let secsToNext = ceil(max(0, timeToNext) / 1000);
-        let percent = (currentDecayPercent * 100).toFixed(0);
-        decayInfoText = `Gold Loss: ${percent}% (Next: ${secsToNext}s)`;
-        if (isGoldLossCountdownActive || goldLossMessageActive) {
-            showLossText = false;
-        }
-        if (showLossText && nextDecayTime !== Infinity) {
-            let decayTextSize = uiScoreTextSize * 0.85;
-            let decayTextColor = color(200, 200, 200, 220);
-            drawEnhancedUIText(decayInfoText, uiSideMargin, decayTextY, decayTextSize, decayTextColor, LEFT);
-        }
-    }
-
-    // Draw Drop Button
-    let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY;
-    let dropBtnW = buttonWidth; let dropBtnH = buttonHeight;
-    let dropButtonTextSize = max(8, baseButtonTextSize * currentScale * 1.3);
-    let canDrop = false; let dropLabel = "";
-    if (currentGameMode === 'SURVIVAL') {
-        let totalDropCost = betAmount;
-        canDrop = (score >= totalDropCost); // Check if enough Gold
-        dropLabel = `Drop (Cost: ${totalDropCost})`;
-    } else if (currentGameMode === 'HIGHSCORE') {
-        canDrop = (ballsRemaining > 0);
-        dropLabel = `Drop Ball (${ballsRemaining} left)`; // Gold cost (10) is implicit now
-    }
-    drawNeonButton( dropLabel, dropBtnX, dropBtnY, dropBtnW, dropBtnH, neonBlue, 0, uiFont, dropButtonTextSize, canDrop && gameState === 'PLAYING' );
-    pop();
-}
-function drawGameOverOverlay() { push(); fill(0, 0, 0, 190); rect(0, 0, gameAreaWidth, scaledCanvasHeight); textFont(titleFont); textAlign(CENTER, CENTER); if (gameOverState === 'SHOWING_FORM') { let message = ""; let messageSize = max(26, 52 * currentScale); let messageY = scaledCanvasHeight * 0.35; let messageColor = color(220, 220, 220); if (currentGameMode === 'SURVIVAL') { message = "Game Over"; messageColor = color(trueRed[0], trueRed[1], trueRed[2]); let sessionScoreY = messageY + messageSize * 0.7; let sessionScoreSize = messageSize * 0.6; textSize(sessionScoreSize); fill(220, 220, 180); drawingContext.shadowBlur = max(4, 12 * currentScale); drawingContext.shadowColor = 'rgba(220, 220, 180, 0.6)'; text(`Total Points: ${sessionScore}`, gameAreaWidth / 2, sessionScoreY);
- drawingContext.shadowBlur = 0; } else if (currentGameMode === 'HIGHSCORE') { message = `TOTAL POINTS: ${highScorePoints}`; // High Score End Game Text
- messageColor = color(neonGreen[0], neonGreen[1], neonGreen[2]); } textSize(messageSize); drawingContext.shadowBlur = max(8, 18 * currentScale); drawingContext.shadowColor = messageColor.toString(); fill(messageColor); text(message, gameAreaWidth / 2, messageY); drawingContext.shadowBlur = 0; const form = document.getElementById('leaderboard-form'); if (form && form.style.display !== 'none') { positionLeaderboardForm(form); } } else if (gameOverState === 'SHOWING_LEADERBOARD') { let titleY = leaderboardYOffset; textSize(leaderboardTitleSize); fill(220, 200, 255); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = 'rgba(220, 200, 255, 0.5)'; text("Leaderboard", gameAreaWidth / 2, titleY); drawingContext.shadowBlur = 0; drawLeaderboard(); let btnW = buttonWidth * gameOverButtonWidthScale; let btnH = buttonHeight * gameOverButtonHeightScale; let btnX = gameAreaWidth / 2 - btnW / 2; let spacing = gameOverButtonSpacing * currentScale; let btnFontSize = max(10, baseButtonTextSize * currentScale * 1.6); let menuBtnY = scaledCanvasHeight - spacing * 1.5 - btnH; let restartBtnY = menuBtnY - spacing - btnH; drawNeonButton("Restart", btnX, restartBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); drawNeonButton("Menu", btnX, menuBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); } pop(); }
-function drawLeaderboard() { push(); textFont(uiFont); textSize(leaderboardTextSize); textAlign(LEFT, TOP); let startY = leaderboardYOffset + leaderboardTitleSize + 20 * currentScale; let lineH = (leaderboardTextSize + leaderboardEntrySpacing) * 1.3; const maxRankStr = "10."; const maxNameStr = "WWWWWWWWWW"; const maxScoreStr = "9,999,999"; const rankColWidth = textWidth(maxRankStr) + 5 * currentScale; const nameColWidth = textWidth(maxNameStr) + 15 * currentScale; const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale; const totalContentWidth = rankColWidth + nameColWidth + scoreColWidth; const leaderboardCenterX = gameAreaWidth / 2; const blockStartX = leaderboardCenterX - totalContentWidth / 2; const rankColumnX = blockStartX; const nameColumnX = rankColumnX + rankColWidth; const scoreColumnAlignX = nameColumnX + nameColWidth + scoreColWidth; const strongGold = color(255, 190, 0); const mediumGold = color(255, 215, 0); const lightGold = color(255, 235, 100); const defaultColor = color(210, 210, 230); if (leaderboardLoading) { textAlign(CENTER, TOP); fill(200); textStyle(NORMAL); text("Loading Leaderboard...", leaderboardCenterX, startY); } else if (leaderboardError) { textAlign(CENTER, TOP); fill(softRed[0], softRed[1], softRed[2]); textStyle(NORMAL); text(`Error: ${leaderboardError}`, leaderboardCenterX, startY); text("Could not load leaderboard.", leaderboardCenterX, startY + lineH); } else if (leaderboardData && leaderboardData.length > 0) { let bottomButtonAreaY = scaledCanvasHeight - (buttonHeight * gameOverButtonHeightScale * 2 + gameOverButtonSpacing * currentScale * 3); let availableHeight = bottomButtonAreaY - startY; let maxVisibleEntries = floor(availableHeight / lineH); maxVisibleEntries = max(0, maxVisibleEntries); for (let i = 0; i < min(leaderboardData.length, maxVisibleEntries); i++) { let entry = leaderboardData[i]; let rank = i + 1; let nameStr = (entry.player_name || 'ANONYMOUS').toUpperCase().substring(0, 10); let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A'; // Displays score submitted (Points for Survival, highScorePoints for High Score)
- let rankStr = `${rank}.`; let entryColor = defaultColor; let applyBold = false; if (i === 0) { entryColor = lightGold; applyBold = true; } else if (i === 1) { entryColor = mediumGold; applyBold = true; } else if (i === 2) { entryColor = strongGold; applyBold = true; } if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); } fill(entryColor); let currentY = startY + i * lineH; textAlign(LEFT, TOP); text(rankStr, rankColumnX, currentY); textAlign(LEFT, TOP); text(nameStr, nameColumnX, currentY); textAlign(RIGHT, TOP); text(scoreStr, scoreColumnAlignX, currentY); } textStyle(NORMAL); if (leaderboardData.length > maxVisibleEntries) { fill(180); textAlign(CENTER, TOP); text("...", leaderboardCenterX, startY + maxVisibleEntries * lineH); } } else if (leaderboardData) { fill(180); textAlign(CENTER, TOP); textStyle(NORMAL); text("Leaderboard is empty.", leaderboardCenterX, startY); } else { fill(150); textAlign(CENTER, TOP); textStyle(NORMAL); text("No leaderboard data.", leaderboardCenterX, startY); } pop(); }
+function drawGameUI() { push(); textFont(uiFont); fill(230, 230, 240, 220); textAlign(LEFT, TOP); let textX = uiSideMargin; let goldTextY = scoreY; let lineHeight = uiScoreTextSize * 1.5; let scoreColor = color(230, 230, 240, 220); if (currentGameMode === 'SURVIVAL' && goldLossFlashActive) { let flashProgress = (goldLossFlashEndFrame - frameCount) / pointsLossFlashDurationFrames; let flashSin = sin(flashProgress * PI); scoreColor = lerpColor(color(230, 230, 240, 220), color(brightRed[0], brightRed[1], brightRed[2]), flashSin); } let goldText = `Gold: ${floor(score)}`; drawEnhancedUIText(goldText, textX, goldTextY, uiScoreTextSize, scoreColor, LEFT); let rightSideTopY = scoreY - uiScoreTextSize - (3 * currentScale); let rightSideBottomY = scoreY; if (currentGameMode === 'HIGHSCORE') { let highScorePointsText = `Total points earned: ${highScorePoints}`; drawEnhancedUIText(highScorePointsText, gameAreaWidth - uiSideMargin, rightSideTopY, uiScoreTextSize, color(230), RIGHT); let ballsLeftText = `Balls Left: ${ballsRemaining}`; drawEnhancedUIText(ballsLeftText, gameAreaWidth - uiSideMargin, rightSideBottomY, uiScoreTextSize, color(230), RIGHT); } else if (currentGameMode === 'SURVIVAL') { let survivalPointsText = `Total Points Earned: ${sessionScore}`; drawEnhancedUIText(survivalPointsText, gameAreaWidth - uiSideMargin, rightSideBottomY, uiScoreTextSize, color(230), RIGHT); } if (currentGameMode === 'SURVIVAL') { let decayTextY = goldTextY + uiScoreTextSize + (5 * currentScale); let decayInfoText = ""; let showLossText = true; let now = millis(); let timeToNext = nextDecayTime - now; let secsToNext = ceil(max(0, timeToNext) / 1000); let percent = (currentDecayPercent * 100).toFixed(0); decayInfoText = `Gold Loss: ${percent}% (Next: ${secsToNext}s)`; if (isGoldLossCountdownActive || goldLossMessageActive) { showLossText = false; } if (showLossText && nextDecayTime !== Infinity) { let decayTextSize = uiScoreTextSize * 0.85; let decayTextColor = color(200, 200, 200, 220); drawEnhancedUIText(decayInfoText, uiSideMargin, decayTextY, decayTextSize, decayTextColor, LEFT); } } let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY; let dropBtnW = buttonWidth; let dropBtnH = buttonHeight; let dropButtonTextSize = max(8, baseButtonTextSize * currentScale * 1.3); let canDrop = false; let dropLabel = ""; if (currentGameMode === 'SURVIVAL') { let totalDropCost = betAmount; canDrop = (score >= totalDropCost); dropLabel = `Drop (Cost: ${totalDropCost})`; } else if (currentGameMode === 'HIGHSCORE') { canDrop = (ballsRemaining > 0); dropLabel = `Drop Ball (${ballsRemaining} left)`; } drawNeonButton( dropLabel, dropBtnX, dropBtnY, dropBtnW, dropBtnH, neonBlue, 0, uiFont, dropButtonTextSize, canDrop && gameState === 'PLAYING' ); pop(); }
+function drawGameOverOverlay() { push(); fill(0, 0, 0, 190); rect(0, 0, gameAreaWidth, scaledCanvasHeight); textFont(titleFont); textAlign(CENTER, CENTER); if (gameOverState === 'SHOWING_FORM') { let message = ""; let messageSize = max(26, 52 * currentScale); let messageY = scaledCanvasHeight * 0.35; let messageColor = color(220, 220, 220); if (currentGameMode === 'SURVIVAL') { message = "Game Over"; messageColor = color(trueRed[0], trueRed[1], trueRed[2]); let sessionScoreY = messageY + messageSize * 0.7; let sessionScoreSize = messageSize * 0.6; textSize(sessionScoreSize); fill(220, 220, 180); drawingContext.shadowBlur = max(4, 12 * currentScale); drawingContext.shadowColor = 'rgba(220, 220, 180, 0.6)'; text(`Total Points: ${sessionScore}`, gameAreaWidth / 2, sessionScoreY); drawingContext.shadowBlur = 0; } else if (currentGameMode === 'HIGHSCORE') { message = `TOTAL POINTS: ${highScorePoints}`; messageColor = color(neonGreen[0], neonGreen[1], neonGreen[2]); } textSize(messageSize); drawingContext.shadowBlur = max(8, 18 * currentScale); drawingContext.shadowColor = messageColor.toString(); fill(messageColor); text(message, gameAreaWidth / 2, messageY); drawingContext.shadowBlur = 0; const form = document.getElementById('leaderboard-form'); if (form && form.style.display !== 'none') { positionLeaderboardForm(form); } } else if (gameOverState === 'SHOWING_LEADERBOARD') { let titleY = leaderboardYOffset; textSize(leaderboardTitleSize); fill(220, 200, 255); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = 'rgba(220, 200, 255, 0.5)'; text("Leaderboard", gameAreaWidth / 2, titleY); drawingContext.shadowBlur = 0; drawLeaderboard(); let btnW = buttonWidth * gameOverButtonWidthScale; let btnH = buttonHeight * gameOverButtonHeightScale; let btnX = gameAreaWidth / 2 - btnW / 2; let spacing = gameOverButtonSpacing * currentScale; let btnFontSize = max(10, baseButtonTextSize * currentScale * 1.6); let menuBtnY = scaledCanvasHeight - spacing * 1.5 - btnH; let restartBtnY = menuBtnY - spacing - btnH; drawNeonButton("Restart", btnX, restartBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); drawNeonButton("Menu", btnX, menuBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); } pop(); }
+function drawLeaderboard() { push(); textFont(uiFont); textSize(leaderboardTextSize); textAlign(LEFT, TOP); let startY = leaderboardYOffset + leaderboardTitleSize + 20 * currentScale; let lineH = (leaderboardTextSize + leaderboardEntrySpacing) * 1.3; const maxRankStr = "10."; const maxNameStr = "WWWWWWWWWW"; const maxScoreStr = "9,999,999"; const rankColWidth = textWidth(maxRankStr) + 5 * currentScale; const nameColWidth = textWidth(maxNameStr) + 15 * currentScale; const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale; const totalContentWidth = rankColWidth + nameColWidth + scoreColWidth; const leaderboardCenterX = gameAreaWidth / 2; const blockStartX = leaderboardCenterX - totalContentWidth / 2; const rankColumnX = blockStartX; const nameColumnX = rankColumnX + rankColWidth; const scoreColumnAlignX = nameColumnX + nameColWidth + scoreColWidth; const strongGold = color(255, 190, 0); const mediumGold = color(255, 215, 0); const lightGold = color(255, 235, 100); const defaultColor = color(210, 210, 230); if (leaderboardLoading) { textAlign(CENTER, TOP); fill(200); textStyle(NORMAL); text("Loading Leaderboard...", leaderboardCenterX, startY); } else if (leaderboardError) { textAlign(CENTER, TOP); fill(softRed[0], softRed[1], softRed[2]); textStyle(NORMAL); text(`Error: ${leaderboardError}`, leaderboardCenterX, startY); text("Could not load leaderboard.", leaderboardCenterX, startY + lineH); } else if (leaderboardData && leaderboardData.length > 0) { let bottomButtonAreaY = scaledCanvasHeight - (buttonHeight * gameOverButtonHeightScale * 2 + gameOverButtonSpacing * currentScale * 3); let availableHeight = bottomButtonAreaY - startY; let maxVisibleEntries = floor(availableHeight / lineH); maxVisibleEntries = max(0, maxVisibleEntries); for (let i = 0; i < min(leaderboardData.length, maxVisibleEntries); i++) { let entry = leaderboardData[i]; let rank = i + 1; let nameStr = (entry.player_name || 'ANONYMOUS').toUpperCase().substring(0, 10); let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A'; let rankStr = `${rank}.`; let entryColor = defaultColor; let applyBold = false; if (i === 0) { entryColor = lightGold; applyBold = true; } else if (i === 1) { entryColor = mediumGold; applyBold = true; } else if (i === 2) { entryColor = strongGold; applyBold = true; } if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); } fill(entryColor); let currentY = startY + i * lineH; textAlign(LEFT, TOP); text(rankStr, rankColumnX, currentY); textAlign(LEFT, TOP); text(nameStr, nameColumnX, currentY); textAlign(RIGHT, TOP); text(scoreStr, scoreColumnAlignX, currentY); } textStyle(NORMAL); if (leaderboardData.length > maxVisibleEntries) { fill(180); textAlign(CENTER, TOP); text("...", leaderboardCenterX, startY + maxVisibleEntries * lineH); } } else if (leaderboardData) { fill(180); textAlign(CENTER, TOP); textStyle(NORMAL); text("Leaderboard is empty.", leaderboardCenterX, startY); } else { fill(150); textAlign(CENTER, TOP); textStyle(NORMAL); text("No leaderboard data.", leaderboardCenterX, startY); } pop(); }
 function drawNeonButton(label, x, y, w, h, baseColor, cost = 0, font = uiFont, fontSize = 15, enabled = true) { push(); noStroke(); translate(x, y); let cornerRadius = h * 0.3; let gradColorLight, gradColorDark, glowColor, textColor; let isDisabled = !enabled; if (isDisabled) { gradColorLight = color(80, 80, 90, 200); gradColorDark = color(50, 50, 60, 200); glowColor = color(0, 0, 0, 0); textColor = color(140, 140, 150); } else { gradColorLight = color(baseColor[0], baseColor[1], baseColor[2], 255); gradColorDark = color(baseColor[0] * 0.6, baseColor[1] * 0.6, baseColor[2] * 0.6, 255); glowColor = color(baseColor[0], baseColor[1], baseColor[2], 180); textColor = color(255); } if (enabled) { drawingContext.shadowBlur = max(6, 22 * currentScale); drawingContext.shadowColor = glowColor.toString(); } else { drawingContext.shadowBlur = 0; } let grad = drawingContext.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, gradColorLight.toString()); grad.addColorStop(1, gradColorDark.toString()); drawingContext.fillStyle = grad; rect(0, 0, w, h, cornerRadius); drawingContext.shadowBlur = 0; fill(textColor); textFont(font); textSize(fontSize); textAlign(CENTER, CENTER); text(label, w / 2, h / 2 + max(1, 1.5 * currentScale)); pop(); }
 function drawSlider(slider) { if (!slider) return; push(); let sliderXRelative = slider.x; let trackY = slider.y + 25 * currentScale; let scaledFontSize = max(8, 12 * currentScale); let isDisabled = slider.enabled !== undefined && !slider.enabled; let labelColor = isDisabled ? color(120) : color(220); let trackColor = isDisabled ? color(80) : color(120); let handleColor = isDisabled ? color(100) : neonYellow; let handleGlow = isDisabled ? 'rgba(100, 100, 100, 0)' : 'rgba(255, 255, 0, 0.7)'; let valueColor = isDisabled ? color(120) : color(220); fill(labelColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, BOTTOM); text(slider.label, sliderXRelative + sliderWidth / 2, trackY - 6 * currentScale); stroke(trackColor); strokeWeight(max(2, 4 * currentScale)); line(sliderXRelative, trackY, sliderXRelative + sliderWidth, trackY); let handleXRelative = map(slider.value, slider.minVal, slider.maxVal, sliderXRelative, sliderXRelative + sliderWidth); handleXRelative = constrain(handleXRelative, sliderXRelative, sliderXRelative + sliderWidth); noStroke(); fill(handleColor); if (!isDisabled) { drawingContext.shadowBlur = max(4, 10 * currentScale); drawingContext.shadowColor = handleGlow; } ellipse(handleXRelative, trackY, sliderHandleSize, sliderHandleSize); drawingContext.shadowBlur = 0; fill(valueColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, TOP); let valueText = ""; if (slider === musicVolumeSlider) { valueText = floor(slider.value); } else if (slider === speedSlider) { valueText = slider.value.toFixed(1) + 'x'; } else if (slider === sfxVolumeSlider) { valueText = slider.value.toFixed(2); } else { valueText = floor(slider.value); } text(valueText, sliderXRelative + sliderWidth / 2, trackY + 8 * currentScale); pop(); }
-function drawStatisticsBars() { push(); const chartHeightMax = max(40, 80 * currentScale); const chartWidth = max(90, 180 * currentScale); const chartX = gameAreaWidth - chartWidth - max(5, 10 * currentScale); const chartY = max(40, 80 * currentScale); let maxHitCount = 0; for (let count of slotHitCounts) { if (count > maxHitCount) { maxHitCount = count; } } if (maxHitCount === 0) { stroke(100); strokeWeight(max(1, 1 * currentScale)); line(chartX, chartY + chartHeightMax, chartX + chartWidth, chartY + chartHeightMax); noStroke(); pop(); return; } const barWidth = chartWidth / numSlots; translate(chartX, chartY); for (let i = 0; i < numSlots; i++) { let count = slotHitCounts[i]; let barH = map(count, 0, maxHitCount, 0, chartHeightMax); let barX = i * barWidth; let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(50 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let barColor = colorFactor < 0.5 ? lerpColor(color(255, 255, 0, 200), color(255, 165, 0, 200), map(colorFactor, 0, 0.5, 0, 1)) : lerpColor(color(255, 165, 0, 200), color(200, 0, 0, 200), map(colorFactor, 0.5, 1, 0, 1)); let currentBarColor = barColor; if (histogramBarPulseState[i] > 0) { let pulseProgress = map(histogramBarPulseState[i], histogramPulseDuration, 0, 1, 0); let pulseBrightness = lerp(1.0, 1.8, pulseProgress * pulseProgress); currentBarColor = color( min(255, red(barColor) * pulseBrightness), min(255, green(barColor) * pulseBrightness), min(255, blue(barColor) * pulseBrightness), alpha(barColor) ); histogramBarPulseState[i]--; } fill(currentBarColor); noStroke(); rect(barX, chartHeightMax - barH, barWidth - max(1, 1 * currentScale), barH); } stroke(150); strokeWeight(max(1, 1 * currentScale)); line(0, chartHeightMax, chartWidth, chartHeightMax); noStroke(); pop(); }
+function drawStatisticsBars() { push(); const chartHeightMax = max(40, 80 * currentScale); const chartWidth = max(90, 180 * currentScale); const chartX = gameAreaWidth - chartWidth - max(5, 10 * currentScale); const chartY = max(40, 80 * currentScale); let maxHitCount = 0; for (let count of slotHitCounts) { if (count > maxHitCount) { maxHitCount = count; } } if (maxHitCount === 0) { stroke(100); strokeWeight(max(1, 1 * currentScale)); line(chartX, chartY + chartHeightMax, chartX + chartWidth, chartY + chartHeightMax); noStroke(); pop(); return; } const barWidth = chartWidth / numSlots; translate(chartX, chartY); for (let i = 0; i < numSlots; i++) { let count = slotHitCounts[i]; let barH = map(count, 0, maxHitCount, 0, chartHeightMax); let barX = i * barWidth; let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(25 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let barColor = colorFactor < 0.5 ? lerpColor(color(255, 255, 0, 200), color(255, 165, 0, 200), map(colorFactor, 0, 0.5, 0, 1)) : lerpColor(color(255, 165, 0, 200), color(200, 0, 0, 200), map(colorFactor, 0.5, 1, 0, 1)); let currentBarColor = barColor; if (histogramBarPulseState[i] > 0) { let pulseProgress = map(histogramBarPulseState[i], histogramPulseDuration, 0, 1, 0); let pulseBrightness = lerp(1.0, 1.8, pulseProgress * pulseProgress); currentBarColor = color( min(255, red(barColor) * pulseBrightness), min(255, green(barColor) * pulseBrightness), min(255, blue(barColor) * pulseBrightness), alpha(barColor) ); histogramBarPulseState[i]--; } fill(currentBarColor); noStroke(); rect(barX, chartHeightMax - barH, barWidth - max(1, 1 * currentScale), barH); } stroke(150); strokeWeight(max(1, 1 * currentScale)); line(0, chartHeightMax, chartWidth, chartHeightMax); noStroke(); pop(); }
 function drawMarker() { if (gameState !== 'PLAYING' || markerX === undefined || markerY === undefined) return; push(); fill(markerColor); noStroke(); ellipse(markerX, markerY, markerSize * 1.2, markerSize * 1.2); pop(); }
 
 // ============================ Body Creation Functions ============================
-// ... (no changes needed here) ...
 function createPegs() { pegs.forEach(peg => { if (Composite.get(world, peg.id, 'body')) { World.remove(world, peg); } }); pegs = []; lastRowPegPositionsX = []; topRowOuterPegsX = []; lastPegRowY = 0; let scaledPegRadius = basePegRadius * currentScale; let scaledPegSpacing = basePegSpacing * currentScale; let scaledStartY = baseStartYPegs * currentScale; const options = { isStatic: true, restitution: pegRestitution, friction: pegFriction, label: 'peg', plugin: { glowTimer: 0 } }; for (let row = 0; row < pegRowsTotal; row++) { let pegsInRow = row + 3; let y = scaledStartY + row * scaledPegSpacing * 0.95; let totalWidth = (pegsInRow - 1) * scaledPegSpacing; let startX = (gameAreaWidth - totalWidth) / 2; if (y > lastPegRowY) { lastPegRowY = y; } let isLastRow = (row === pegRowsTotal - 1); let isFirstRow = (row === 0); for (let col = 0; col < pegsInRow; col++) { let x = startX + col * scaledPegSpacing; let peg = Bodies.circle(x, y, scaledPegRadius, options); World.add(world, peg); pegs.push(peg); if (isLastRow) { lastRowPegPositionsX.push(x); } if (isFirstRow) { if (col === 0) topRowOuterPegsX[0] = x; if (col === pegsInRow - 1) topRowOuterPegsX[1] = x; } } } if (topRowOuterPegsX.length === 2) { markerMinX = topRowOuterPegsX[0]; markerMaxX = topRowOuterPegsX[1]; if (markerX === undefined || markerX < markerMinX || markerX > markerMaxX) { markerX = markerMinX; } markerY = scaledStartY - 30 * currentScale; markerSpeed = baseMarkerSpeed * currentScale; markerSize = baseMarkerSize * currentScale; } else { console.error("Could not find outermost top pegs for marker! Using fallback bounds."); markerMinX = gameAreaWidth * 0.1; markerMaxX = gameAreaWidth * 0.9; markerX = markerMinX; markerY = scaledStartY - 30 * currentScale; } if (lastRowPegPositionsX.length !== numSlots + 1) { console.error(`Peg position error: Expected ${numSlots + 1} bottom peg X positions for dividers, found ${lastRowPegPositionsX.length}. Dividers might be incorrect.`); } }
 function createSlotsAndDividers() { dividers.forEach(div => { if (Composite.get(world, div.id, 'body')) { World.remove(world, div); } }); slotSensors.forEach(sen => { if (Composite.get(world, sen.id, 'body')) { World.remove(world, sen); } }); dividers = []; slotSensors = []; let scaledSlotHeight = baseSlotHeight * currentScale; let scaledDividerWidth = max(1, baseDividerWidth * currentScale); if (typeof slotStartY === 'undefined') { console.error("slotStartY undefined in createSlotsAndDividers. Cannot create slots."); return; } if (!lastRowPegPositionsX || lastRowPegPositionsX.length !== numSlots + 1) { console.error(`Incorrect number of peg positions for dividers: Expected ${numSlots + 1}, found ${lastRowPegPositionsX?.length}. Using fallback positions.`); lastRowPegPositionsX = []; const approxSlotWidth = gameAreaWidth * 0.8 / numSlots; const startDivX = gameAreaWidth * 0.1; for (let i = 0; i <= numSlots; i++) { lastRowPegPositionsX.push(startDivX + i * approxSlotWidth); } } const sensorOptions = { isStatic: true, isSensor: true, label: '' }; const dividerOptions = { isStatic: true, restitution: dividerRestitution, friction: dividerFriction, label: 'divider' }; const dividerHeight = scaledSlotHeight + 5 * currentScale; const dividerY = slotStartY + scaledSlotHeight / 2; let currentDividers = []; for (let i = 0; i < lastRowPegPositionsX.length; i++) { let dividerX = lastRowPegPositionsX[i]; let divider = Bodies.rectangle(dividerX, dividerY, scaledDividerWidth, dividerHeight, dividerOptions); currentDividers.push(divider); } dividers = currentDividers; World.add(world, dividers); const sensorY = slotStartY + scaledSlotHeight / 2; for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1]) { console.error(`Missing divider for slot sensor ${i}`); continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let sensorSlotWidth = dividerRightX - dividerLeftX; if (sensorSlotWidth <= 0) { sensorSlotWidth = 1; } let currentSensorOptions = { ...sensorOptions, label: `slot_${i}` }; let sensor = Bodies.rectangle(slotCenterX, sensorY, sensorSlotWidth, scaledSlotHeight, currentSensorOptions); World.add(world, sensor); slotSensors.push(sensor); } }
 function createBoundaries() { boundaries.forEach(body => { if (Composite.get(world, body.id, 'body')) { World.remove(world, body); } }); boundaries = []; const wallOptions = { isStatic: true, isSensor: true, label: 'wall' }; const groundOptions = { isStatic: true, restitution: groundRestitution, friction: groundFriction, label: 'ground' }; const wallThickness = max(5, 20 * currentScale); if (typeof slotStartY === 'undefined') { console.error("Cannot create boundaries: slotStartY is undefined."); return; } let scaledSlotHeight = baseSlotHeight * currentScale; const groundY = slotStartY + scaledSlotHeight + wallThickness / 2 - max(1, 1 * currentScale); let leftmostX = wallThickness / 2; let rightmostX = gameAreaWidth - wallThickness / 2; if (dividers.length > 0 && dividers[0].position && dividers[dividers.length - 1].position) { const firstDividerX = dividers[0].position.x; const lastDividerX = dividers[dividers.length - 1].position.x; const scaledDividerWidth = max(1, baseDividerWidth * currentScale); const wallPadding = (basePegSpacing * 1.5) * currentScale; leftmostX = Math.max(wallThickness / 2, firstDividerX - wallPadding - scaledDividerWidth / 2); rightmostX = Math.min(gameAreaWidth - wallThickness / 2, lastDividerX + wallPadding + scaledDividerWidth / 2); } else { console.warn("No dividers found for precise boundary calculation. Using default bounds."); } let leftWall = Bodies.rectangle(leftmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let rightWall = Bodies.rectangle(rightmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let groundWidth = rightmostX - leftmostX + wallThickness; let groundCenterX = (leftmostX + rightmostX) / 2; let ground = Bodies.rectangle(groundCenterX, groundY, groundWidth, wallThickness, groundOptions); World.add(world, [leftWall, rightWall, ground]); boundaries.push(leftWall, rightWall, ground); }
 function createPhysicsBall(x, y) { const scaledBallRadius = currentBallRadius * currentScale; const ballColor = neonBlue; const label = 'ball_regular'; const options = { restitution: ballRestitution, friction: 0.05, frictionAir: ballFrictionAir, density: ballDensity, label: label, isStatic: false, plugin: { type: 'regular', hitWall: false, path: [] }, render: { fillStyle: `rgb(${ballColor[0]}, ${ballColor[1]}, ${ballColor[2]})` } }; let ball = Bodies.circle(x, y, scaledBallRadius, options); Body.setVelocity(ball, { x: Common.random(-0.1, 0.1) * currentScale, y: 0 }); World.add(world, ball); balls.push(ball); }
 
 // ============================ Collision & Scoring ============================
-function handleCollisions(event) { let pairs = event.pairs; for (let i = 0; i < pairs.length; i++) { let pair = pairs[i]; if (!pair || !pair.isActive || !pair.collision) continue; let bodyA = pair.bodyA; let bodyB = pair.bodyB; let ball = null, sensor = null, ground = null, wall = null, peg = null, divider = null; if (bodyA.label === 'ball_regular') ball = bodyA; else if (bodyB.label === 'ball_regular') ball = bodyB; if (bodyA.label.startsWith('slot_')) sensor = bodyA; else if (bodyB.label.startsWith('slot_')) sensor = bodyB; if (bodyA.label === 'ground') ground = bodyA; else if (bodyB.label === 'ground') ground = bodyB; if (bodyA.label === 'wall') wall = bodyA; else if (bodyB.label === 'wall') wall = bodyB; if (bodyA.label === 'peg') peg = bodyA; else if (bodyB.label === 'peg') peg = bodyB; if (bodyA.label === 'divider') divider = bodyA; else if (bodyB.label === 'divider') divider = bodyB; if (ball && sensor) { if (!Composite.get(world, ball.id, 'body')) continue; let hitSlotIndex = parseInt(sensor.label.split('_')[1]); if (hitSlotIndex >= 0 && hitSlotIndex < numSlots) { let sensorBody = slotSensors[hitSlotIndex]; if (!sensorBody) { console.warn(`Collision: Could not find sensor body for index ${hitSlotIndex}`); continue; } let slotCenterX = sensorBody.position.x; let slotCenterY = sensorBody.position.y; let slotWidth = sensorBody.bounds.max.x - sensorBody.bounds.min.x; slotHitCounts[hitSlotIndex]++; histogramBarPulseState[hitSlotIndex] = histogramPulseDuration; slotBounceState[hitSlotIndex] = bounceDuration; slotGlowState[hitSlotIndex] = slotGlowDuration; createParticleBurst(slotCenterX, slotCenterY); createRippleEffect(slotCenterX, slotCenterY, slotWidth); createBackgroundRipple(slotCenterX, slotCenterY); let baseMultiplierValue = slotMultipliers[hitSlotIndex]; let finalMultiplier = baseMultiplierValue; let amountWon = 0; if (currentGameMode === 'SURVIVAL') { if (isDoubleMultiplierActive) finalMultiplier *= 2; amountWon = betAmount * finalMultiplier; } else if (currentGameMode === 'HIGHSCORE') { finalMultiplier = baseMultiplierValue; amountWon = finalMultiplier * 10; // Points calculation for High Score
- } let amountToAdd = floor(amountWon);
-
- // Add points/gold based on game mode
- if (currentGameMode === 'SURVIVAL') { sessionScore += amountToAdd; // Add to total points earned in Survival
- score += amountToAdd; // Also add to current gold in Survival
- } else if (currentGameMode === 'HIGHSCORE') { highScorePoints += amountToAdd; // Add ONLY to high score points
- }
-
- recentHits.push({ value: finalMultiplier, timestamp: frameCount }); if (recentHits.length > maxMultiplierHistory) { recentHits.shift(); } if (blopSound && blopSound.isLoaded()) { blopSound.play(); } if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else { console.warn(`Invalid slot index ${hitSlotIndex} from sensor ${sensor.label}. Removing ball.`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } } else if (ball && peg) { if (peg.plugin) { peg.plugin.glowTimer = pegGlowDuration; } if (pair.collision.normal) { let forceDirection = Matter.Vector.sub(ball.position, peg.position); forceDirection = Matter.Vector.normalise(forceDirection); forceDirection = Matter.Vector.mult(forceDirection, horizontalKickStrength); forceDirection.y *= 0.1; Body.applyForce(ball, ball.position, forceDirection); } createBackgroundRipple(peg.position.x, peg.position.y); } else if (ball && wall) { if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else if (ball && (ground || divider)) { /* Physics handles bounce */ } } }
+function handleCollisions(event) { let pairs = event.pairs; for (let i = 0; i < pairs.length; i++) { let pair = pairs[i]; if (!pair || !pair.isActive || !pair.collision) continue; let bodyA = pair.bodyA; let bodyB = pair.bodyB; let ball = null, sensor = null, ground = null, wall = null, peg = null, divider = null; if (bodyA.label === 'ball_regular') ball = bodyA; else if (bodyB.label === 'ball_regular') ball = bodyB; if (bodyA.label.startsWith('slot_')) sensor = bodyA; else if (bodyB.label.startsWith('slot_')) sensor = bodyB; if (bodyA.label === 'ground') ground = bodyA; else if (bodyB.label === 'ground') ground = bodyB; if (bodyA.label === 'wall') wall = bodyA; else if (bodyB.label === 'wall') wall = bodyB; if (bodyA.label === 'peg') peg = bodyA; else if (bodyB.label === 'peg') peg = bodyB; if (bodyA.label === 'divider') divider = bodyA; else if (bodyB.label === 'divider') divider = bodyB; if (ball && sensor) { if (!Composite.get(world, ball.id, 'body')) continue; let hitSlotIndex = parseInt(sensor.label.split('_')[1]); if (hitSlotIndex >= 0 && hitSlotIndex < numSlots) { let sensorBody = slotSensors[hitSlotIndex]; if (!sensorBody) { console.warn(`Collision: Could not find sensor body for index ${hitSlotIndex}`); continue; } let slotCenterX = sensorBody.position.x; let slotCenterY = sensorBody.position.y; let slotWidth = sensorBody.bounds.max.x - sensorBody.bounds.min.x; slotHitCounts[hitSlotIndex]++; histogramBarPulseState[hitSlotIndex] = histogramPulseDuration; slotBounceState[hitSlotIndex] = bounceDuration; slotGlowState[hitSlotIndex] = slotGlowDuration; createParticleBurst(slotCenterX, slotCenterY); createRippleEffect(slotCenterX, slotCenterY, slotWidth); createBackgroundRipple(slotCenterX, slotCenterY); let baseMultiplierValue = slotMultipliers[hitSlotIndex]; let finalMultiplier = baseMultiplierValue; let amountWon = 0; if (currentGameMode === 'SURVIVAL') { if (isDoubleMultiplierActive) finalMultiplier *= 2; amountWon = betAmount * finalMultiplier; } else if (currentGameMode === 'HIGHSCORE') { finalMultiplier = baseMultiplierValue; amountWon = finalMultiplier * 10; } let amountToAdd = floor(amountWon); if (currentGameMode === 'SURVIVAL') { sessionScore += amountToAdd; score += amountToAdd; } else if (currentGameMode === 'HIGHSCORE') { highScorePoints += amountToAdd; } recentHits.push({ value: finalMultiplier, timestamp: frameCount }); if (recentHits.length > maxMultiplierHistory) { recentHits.shift(); } if (blopSound && blopSound.isLoaded()) { blopSound.play(); } if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else { console.warn(`Invalid slot index ${hitSlotIndex} from sensor ${sensor.label}. Removing ball.`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } } else if (ball && peg) { if (peg.plugin) { peg.plugin.glowTimer = pegGlowDuration; } if (pair.collision.normal) { let forceDirection = Matter.Vector.sub(ball.position, peg.position); forceDirection = Matter.Vector.normalise(forceDirection); forceDirection = Matter.Vector.mult(forceDirection, horizontalKickStrength); forceDirection.y *= 0.1; Body.applyForce(ball, ball.position, forceDirection); } createBackgroundRipple(peg.position.x, peg.position.y); } else if (ball && wall) { if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else if (ball && (ground || divider)) { /* Physics handles bounce */ } } }
 
 
 // ============================ Event Handlers & Other Logic ============================
 
 // --- showLeaderboardForm, positionLeaderboardForm, hideLeaderboardForm, handleScoreSubmittedSuccessfully, fetchLeaderboardData ---
-// ... (no changes needed here) ...
 function showLeaderboardForm(finalScore, mode) {
     const form = document.getElementById('leaderboard-form');
     const scoreInput = document.getElementById('score');
     const modeInput = document.getElementById('game-mode');
     const nameInput = document.getElementById('player-name');
     const submitButton = form ? form.querySelector('button[type="submit"]') : null;
-
     if (form && scoreInput && modeInput && nameInput && submitButton) {
-        // The value submitted is either sessionScore (Survival Points) or highScorePoints (High Score Points)
         scoreInput.value = Math.floor(finalScore);
         modeInput.value = mode;
-        nameInput.value = ''; // Clear previous name
-        submitButton.disabled = false; // Ensure button is enabled
-        submitButton.textContent = 'Submit Score'; // Reset button text
-        form.style.display = 'block'; // Make the form visible
-        positionLeaderboardForm(form); // Position it correctly
-        setTimeout(() => { nameInput.focus(); }, 50); // Auto-focus name input
+        nameInput.value = '';
+        submitButton.disabled = false;
+        submitButton.textContent = 'Submit Score';
+        form.style.display = 'block';
+        positionLeaderboardForm(form);
+        setTimeout(() => { nameInput.focus(); }, 50);
     } else {
         console.error("Could not find all leaderboard form elements! Skipping form display.");
         leaderboardError = "Leaderboard form unavailable.";
-        gameOverState = 'SHOWING_LEADERBOARD'; // Change state
-        fetchLeaderboardData(); // Attempt to show leaderboard anyway
+        gameOverState = 'SHOWING_LEADERBOARD';
+        fetchLeaderboardData();
     }
 }
 
@@ -763,7 +690,7 @@ function positionLeaderboardForm(formElement) {
         console.warn("Cannot position form: Missing form or canvas element.");
         return;
      }
-    const canvasRect = canvas.elt.getBoundingClientRect(); // Position of canvas on the page
+    const canvasRect = canvas.elt.getBoundingClientRect();
     let messageYCanvas = scaledCanvasHeight * 0.35;
     let messageSize = max(26, 52 * currentScale);
     let textBottomEdgeCanvas = messageYCanvas + messageSize * 0.6;
@@ -808,11 +735,10 @@ async function fetchLeaderboardData() {
     let tableName = currentGameMode === 'SURVIVAL' ? 'survival_leaderboard' : 'high_score_leaderboard';
     if (!currentGameMode) {
         console.warn("fetchLeaderboardData: currentGameMode is null, defaulting to high_score");
-        tableName = 'high_score_leaderboard'; // Default for safety, though shouldn't happen if called correctly
+        tableName = 'high_score_leaderboard';
     }
     console.log(`Fetching leaderboard data from ${tableName}...`);
     try {
-        // Selects the 'score' column which represents sessionScore for Survival, highScorePoints for High Score
         const { data, error } = await window.supabaseClient
             .from(tableName)
             .select('player_name, score')
@@ -835,7 +761,6 @@ async function fetchLeaderboardData() {
 
 
 // --- Audio Functions ---
-// ... (no changes needed here) ...
 function firstInteraction() {
     if (!audioStarted) {
         console.log("Audio Context starting trigger...");
@@ -864,7 +789,6 @@ function firstInteraction() {
         let currentSfxVol = sfxVolumeSlider ? sfxVolumeSlider.value : defaultSfxVolume;
         if (blopSound?.isLoaded()) blopSound.setVolume(currentSfxVol);
         if (bonusSound?.isLoaded()) bonusSound.setVolume(currentSfxVol);
-
         if (backgroundMusic?.isLoaded()) {
             backgroundMusic.setVolume(musicVolume);
             if (musicVolume > 0.01 && !backgroundMusic.isPlaying()) {
@@ -915,7 +839,7 @@ function mousePressed() {
                 }
             }
         }
-        if (isFormVisible) return; // Click outside form, do nothing else
+        if (isFormVisible) return;
 
     } else if (gameState === 'PLAYING') {
          if (mouseX >= menuStartX && mouseX < scaledCanvasWidth) { // Settings Panel
@@ -971,25 +895,36 @@ function mouseReleased() {
 
 function keyPressed() {
     // --- Spacebar to Drop Ball ---
-    if (keyCode === 32 || key === ' ') { // 32 is the keyCode for Spacebar
+    if (keyCode === 32 || key === ' ') {
         if (gameState === 'PLAYING') {
-            // Check the same conditions as the button click
             let canDrop = (currentGameMode === 'SURVIVAL' && score >= betAmount) || (currentGameMode === 'HIGHSCORE' && ballsRemaining > 0);
             if (canDrop) {
                 handleDrop();
-                return false; // Prevent default browser action (e.g., scrolling)
+                return false; // Prevent default browser action
             }
         }
     }
 
-    // --- Admin Speed Slider Toggle ---
+    // --- Admin Speed Slider Toggle (Shift + Ctrl + S) --- <<< UPDATED KEY COMBO >>>
     if (gameState === 'PLAYING' && currentGameMode === 'SURVIVAL') {
-        if (keyIsDown(SHIFT) && (key === 's' || key === 'S')) {
+        if (keyIsDown(SHIFT) && keyIsDown(CONTROL) && (key === 's' || key === 'S')) { // Added CONTROL check
             if (speedSlider) {
                 speedSlider.enabled = !speedSlider.enabled;
                 console.log(`ADMIN: Speed Slider Lock Toggled: ${speedSlider.enabled ? 'OFF (Enabled)' : 'ON (Disabled)'}`);
-                return false; // Prevent default browser action if any
+                return false; // Prevent default browser action
             }
+        }
+    }
+
+    // --- Admin Add Gold (Shift + Ctrl + G) --- <<< NEW FUNCTION >>>
+    if (gameState === 'PLAYING' && currentGameMode === 'SURVIVAL') {
+        if (keyIsDown(SHIFT) && keyIsDown(CONTROL) && (key === 'g' || key === 'G')) {
+            score += ADMIN_ADD_GOLD_AMOUNT;
+            console.log(`ADMIN: Added ${ADMIN_ADD_GOLD_AMOUNT} gold. New total: ${floor(score)}`);
+            // Optional: Trigger gold gain visual feedback if desired
+            // goldLossFlashActive = false; // Ensure no conflict with loss flash
+            // You could potentially add a gain flash effect here
+            return false; // Prevent default browser action
         }
     }
 }
@@ -997,6 +932,7 @@ function keyPressed() {
 
 function checkSliderInteraction(slider, eventType) {
      if (!slider) return false;
+     // Allow interaction with disabled sliders ONLY for release event to stop dragging
      if (eventType !== 'release' && slider.enabled !== undefined && !slider.enabled) {
          return false;
      }
@@ -1010,8 +946,10 @@ function checkSliderInteraction(slider, eventType) {
      let mouseYCanvas = mouseY;
      let distToHandle = dist(mouseXCanvas, mouseYCanvas, handleXAbsolute, trackYAbsolute);
      let interactionOccurred = false;
+
      if (eventType === 'press') {
-         if (mouseXCanvas >= menuStartX && mouseXCanvas < scaledCanvasWidth && mouseYCanvas > slider.y && mouseYCanvas < slider.y + 50 * currentScale) {
+         // Allow press interaction ONLY if the slider is enabled
+         if (slider.enabled && mouseXCanvas >= menuStartX && mouseXCanvas < scaledCanvasWidth && mouseYCanvas > slider.y && mouseYCanvas < slider.y + 50 * currentScale) {
              if (distToHandle < sliderHandleSize * 1.5 || (mouseXCanvas >= trackStartXAbsolute && mouseXCanvas <= trackEndXAbsolute && abs(mouseYCanvas - trackYAbsolute) < sliderHandleSize * 1.5)) {
                  slider.dragging = true;
                  let mouseXRelativeToTrack = mouseXCanvas - trackStartXAbsolute;
@@ -1022,18 +960,25 @@ function checkSliderInteraction(slider, eventType) {
              }
          }
      } else if (eventType === 'drag') {
+         // Allow drag ONLY if dragging started when enabled
          if (slider.dragging) {
-             let mouseXRelativeToTrack = mouseXCanvas - trackStartXAbsolute;
-             let newValue = map(mouseXRelativeToTrack, 0, sliderWidth, slider.minVal, slider.maxVal);
-             newValue = constrain(newValue, slider.minVal, slider.maxVal);
-             updateSliderValue(slider, newValue);
+             // Check again if it's enabled *during* the drag (relevant if toggled mid-drag)
+             if (slider.enabled) {
+                let mouseXRelativeToTrack = mouseXCanvas - trackStartXAbsolute;
+                let newValue = map(mouseXRelativeToTrack, 0, sliderWidth, slider.minVal, slider.maxVal);
+                newValue = constrain(newValue, slider.minVal, slider.maxVal);
+                updateSliderValue(slider, newValue);
+             } else {
+                 // If slider becomes disabled while dragging, stop the drag
+                 slider.dragging = false;
+             }
              interactionOccurred = true;
          }
      } else if (eventType === 'release') {
          if (slider.dragging) {
              interactionOccurred = true;
          }
-         slider.dragging = false;
+         slider.dragging = false; // Always release drag state regardless of enabled status
      }
      return interactionOccurred;
 }
@@ -1044,18 +989,14 @@ function updateSliderValue(slider, newValue) { if (slider === speedSlider) { sli
 function activateDoubleDrop() { if (currentGameMode !== 'SURVIVAL' || isDoubleDropActive) return; isDoubleDropActive = true; doubleDropTimer = doubleDropDuration; doubleDropMessage = "DOUBLE DROP!"; doubleDropMessageTimer = powerupMessageDuration; if (bonusSound?.isLoaded()) { bonusSound.play(); } }
 function activateDoubleMultiplier() { if (currentGameMode !== 'SURVIVAL' || isDoubleMultiplierActive) return; isDoubleMultiplierActive = true; doubleMultiplierTimer = doubleMultiplierDuration; doubleMultiplierMessage = "2x MULTIPLIER!"; doubleMultiplierMessageTimer = powerupMessageDuration; if (bonusSound?.isLoaded()) { bonusSound.play(); } }
 function handleDrop() {
-     // Extra check to ensure we're not dropping during transitions etc.
     if (gameState !== 'PLAYING' || transitionState !== 'NONE') return;
-
     if (currentGameMode === 'SURVIVAL') {
         let cost = betAmount;
         if (score >= cost) {
-            score -= cost; // Deduct Gold cost
+            score -= cost;
             let startX = markerX + random(-1 * currentScale, 1 * currentScale);
             let startY = markerY;
             createPhysicsBall(startX, startY);
-
-            // Power-up Chances
             if (random() < bonusBallChance) {
                 bonusBallMessage = "EXTRA BALL!";
                 bonusBallTimer = bonusBallDuration;
@@ -1085,8 +1026,8 @@ function handleDrop() {
     } else if (currentGameMode === 'HIGHSCORE') {
         if (ballsRemaining > 0) {
             ballsRemaining--;
-            score -= highScoreBallCost; // <<< Deduct fixed gold cost per ball
-            score = max(0, score); // Prevent negative gold display
+            score -= highScoreBallCost;
+            score = max(0, score);
             let startX = markerX + random(-1 * currentScale, 1 * currentScale);
             let startY = markerY;
             createPhysicsBall(startX, startY);
@@ -1102,17 +1043,15 @@ function handleSurvivalDecay() {
     if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
     let now = millis();
     let timeToNext = nextDecayTime - now;
-    // Check if countdown warning should start
     if (timeToNext <= pointsLossWarningStartTime * 1000 && timeToNext > 0 && !isGoldLossCountdownActive && !goldLossMessageActive) {
         isGoldLossCountdownActive = true; goldLossCountdownValue = pointsLossWarningStartTime; goldLossCountdownAnimProgress = 0;
         if(DEBUG_MODE) console.log("Starting gold loss countdown...");
     }
-    // Check if decay should be applied
     if (now >= nextDecayTime) {
-        let decayAmount = floor(score * currentDecayPercent); // Calculate Gold loss
-        goldLostAmountForDisplay = decayAmount; // Store for display
+        let decayAmount = floor(score * currentDecayPercent);
+        goldLostAmountForDisplay = decayAmount;
         if (score > 0 && decayAmount > 0) {
-            score -= decayAmount; // Apply Gold loss
+            score -= decayAmount;
             if (DEBUG_MODE) console.log(`Gold Loss Applied: -${decayAmount} gold (${(currentDecayPercent * 100).toFixed(0)}%) | New Gold: ${floor(score)}`);
             goldLossFlashActive = true; goldLossFlashEndFrame = frameCount + pointsLossFlashDurationFrames;
             isGoldLossCountdownActive = false; goldLossMessageActive = true; goldLossMessageProgress = 0;
@@ -1123,6 +1062,11 @@ function handleSurvivalDecay() {
         currentDecayPercent = min(survivalMaxDecayPercent, currentDecayPercent + survivalDecayIncrement);
         lastDecayTime = now;
         nextDecayTime = now + survivalDecayInterval;
+        if (currentDecayPercent >= survivalMaxDecayPercent) {
+            if (DEBUG_MODE) console.log(`DECAY GAMEOVER: Reached ${currentDecayPercent * 100}% decay.`);
+            isGameOverConditionMet = true;
+            isGameOverFromDecay = true;
+        }
     }
 }
 
@@ -1154,7 +1098,7 @@ function drawGoldLossVisuals() {
     textFont(titleFont); textAlign(CENTER, CENTER); rectMode(CENTER);
     if (isGoldLossCountdownActive && goldLossCountdownValue > 0) {
         let percent = (currentDecayPercent * 100).toFixed(0);
-        let countdownText = `Losing ${percent}% of gold\nin ${goldLossCountdownValue} seconds`; // Keep as gold
+        let countdownText = `Losing ${percent}% of gold\nin ${goldLossCountdownValue} seconds`;
         let baseSize = lossCountdownTextSizeBase * currentScale;
         let easeInOut = 0.5 - 0.5 * cos(goldLossCountdownAnimProgress * PI);
         let currentScaleFactor = lerp(1.0, lossCountdownPulseScale, easeInOut);
@@ -1167,7 +1111,7 @@ function drawGoldLossVisuals() {
         text(countdownText, gameAreaWidth / 2, scaledCanvasHeight / 2);
         drawingContext.shadowBlur = 0;
     } else if (goldLossMessageActive) {
-        let messageText = `-${goldLostAmountForDisplay} Gold`; // Keep as Gold
+        let messageText = `-${goldLostAmountForDisplay} Gold`;
         let baseSize = lossMessageTextSizeBase * currentScale;
         let easeOutQuint = (x) => 1 - pow(1 - x, 5);
         let progressEasedScale = easeOutQuint(goldLossMessageProgress);
@@ -1195,13 +1139,14 @@ function returnToLaunchMenuCleanup() {
     pegs.forEach(peg => { if (peg.plugin) peg.plugin.glowTimer = 0; });
     for (let i = 0; i < numSlots; i++) { slotBounceState[i] = 0; slotGlowState[i] = 0; histogramBarPulseState[i] = 0; slotHitCounts[i] = 0; }
     isGameOverConditionMet = false; highScoreEnded = false; goldLossFlashActive = false;
+    isGameOverFromDecay = false;
     isDoubleDropActive = false; doubleDropTimer = 0; doubleDropMessageTimer = 0;
     isDoubleMultiplierActive = false; doubleMultiplierTimer = 0; doubleMultiplierMessageTimer = 0;
     bonusBallTimer = 0; isGoldLossCountdownActive = false; goldLossMessageActive = false;
-    goldLostAmountForDisplay = 0; highScorePoints = 0; // Reset high score points
+    goldLostAmountForDisplay = 0; highScorePoints = 0;
     gameOverState = 'NONE'; leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
     hideLeaderboardForm();
-    if (speedSlider) speedSlider.enabled = true;
+    if (speedSlider) speedSlider.enabled = true; // Always re-enable speed slider on menu return
     if (betSlider) betSlider.enabled = true;
     if (ballSizeSlider) ballSizeSlider.enabled = true;
 }
@@ -1210,13 +1155,14 @@ function resetGame() {
     let bodiesToRemove = Composite.allBodies(world).filter(body => !body.isStatic && body.label === 'ball_regular');
     bodiesToRemove.forEach(body => { if (Composite.get(world, body.id, 'body')) { World.remove(world, body); } });
     balls = []; activeParticles = []; activeRipples = []; backgroundRipples = []; recentHits = [];
-    sessionScore = 0; // Reset total Points earned for Survival
-    highScorePoints = 0; // Reset points earned in High Score
+    sessionScore = 0;
+    highScorePoints = 0;
     for (let i = 0; i < numSlots; i++) { slotBounceState[i] = 0; slotHitCounts[i] = 0; histogramBarPulseState[i] = 0; slotGlowState[i] = 0; }
     pegs.forEach(peg => { if (peg.plugin) peg.plugin.glowTimer = 0; });
     isDoubleDropActive = false; doubleDropTimer = 0; isDoubleMultiplierActive = false; doubleMultiplierTimer = 0;
     bonusBallMessage = ''; bonusBallTimer = 0; doubleDropMessage = ''; doubleDropMessageTimer = 0; doubleMultiplierMessage = ''; doubleMultiplierMessageTimer = 0;
     highScoreEnded = false; isGameOverConditionMet = false; goldLossFlashActive = false;
+    isGameOverFromDecay = false;
     isGoldLossCountdownActive = false; goldLossMessageActive = false; goldLostAmountForDisplay = 0;
 
     // Reset slider values first
@@ -1230,21 +1176,21 @@ function resetGame() {
 
     // Then set mode-specific settings
     if (currentGameMode === 'SURVIVAL') {
-        score = initialScoreSurvival; // Starting Gold
+        score = initialScoreSurvival;
         betAmount = minBetAmount;
         survivalStartTime = millis(); lastDecayTime = survivalStartTime;
         currentDecayPercent = survivalInitialDecayPercent; nextDecayTime = survivalStartTime + survivalDecayStartDelay;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = true; }
-        if (speedSlider) speedSlider.enabled = false;
+        if (speedSlider) speedSlider.enabled = false; // Start locked in Survival
         ballsRemaining = Infinity;
-        highScorePoints = 0; // Ensure reset
+        highScorePoints = 0;
     } else if (currentGameMode === 'HIGHSCORE') {
-        score = highScoreStartingGold; // Starting Gold
+        score = highScoreStartingGold;
         ballsRemaining = highScoreBallsTotal;
-        betAmount = minBetAmount; // Keep a default bet amount even if unused
-        highScorePoints = 0; // Reset points earned from slots
+        betAmount = minBetAmount;
+        highScorePoints = 0;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = false; }
-        if (speedSlider) speedSlider.enabled = true;
+        if (speedSlider) speedSlider.enabled = true; // Start unlocked in High Score
         survivalStartTime = 0; lastDecayTime = 0; currentDecayPercent = 0; nextDecayTime = Infinity;
     } else {
         console.error("resetGame: No game mode selected! Resetting to default state.");
