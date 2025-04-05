@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v07.71 (Update: Refined Survival desc highlight)
+// P5.js + Matter.js Plinko Game: "DROP" - v0.71 (Update: Refined Survival desc highlight)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -77,7 +77,7 @@ const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lo
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V07.71"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V0.71"; // <<< VERSION number incremented >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
