@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v07.67 (Fix: Define hover icon functions globally)
+// P5.js + Matter.js Plinko Game: "DROP" - v07.71 (Update: Refined Survival desc highlight)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -42,10 +42,16 @@ const baseDropButtonY = 105;
 const neonBlue = [0, 191, 255]; const neonRed = [255, 20, 147]; const neonGreen = [57, 255, 20]; const neonYellow = [255, 255, 0]; const bonusColor = [0, 255, 127]; const trueRed = [255, 0, 0]; const brightRed = [255, 60, 60]; const greyishPurpleBase = [160, 120, 200]; const greyishPurpleHighlight = [210, 180, 255]; const softRed = [255, 90, 90]; const multiplierDisplayOrange = [255, 140, 0]; const markerColor = [255, 255, 255, 200]; const titleColorBase = [200, 200, 220]; const titleColorHighlight = [255, 255, 255]; const titleColorShadow = [50, 50, 80]; const menuButtonGradient = ['#d0b0ff', '#a080cc']; const menuButtonHoverGlow = 'rgba(220, 180, 255, 0.7)'; const gameOverButtonColor = [190, 130, 255]; const uiTextOutlineColor = [20, 15, 40, 200]; const uiTextGlowColor = [200, 180, 255, 100]; const clockHandColor = [255, 90, 90, 220];
 const defaultActualGravity = 0.6; const minActualGravity = 0.1; const maxActualGravity = 1.5; const minSpeedSliderDisplayValue = 0.2; const defaultSpeedSliderDisplay = 1.0; const maxSpeedSliderDisplayValue = 3.0; const minDropAmount = 1; const maxDropAmount = 100; const minBallRadius = 3; const maxBallRadius = 15; const basePegShadowBlur = 5;
 const pegRestitution = 0.35; const pegFriction = 0.3; const ballRestitution = 0.6; const ballFrictionAir = 0.008; const ballDensity = 0.001; const groundRestitution = 0.05; const groundFriction = 0.6; const dividerRestitution = 0.1; const dividerFriction = 0.5; const horizontalKickStrength = 0.0018;
-const bonusBallDuration = 120; const bonusBallChance = 0.01;
-const doubleDropDuration = 30 * 60;
-const doubleDropChance = 0.001; const doubleMultiplierDuration = 30 * 60; const doubleMultiplierChance = 0.0005; const powerupBetScalingFactor = 1.5; const dropDelay = 100;
-const maxTrailLength = 25; const trailStartAlpha = 130; const trailEndAlpha = 0; const trailStartWeightFactor = 0.35; const trailEndWeightFactor = 0.05; const powerupMessageDuration = 90; const pegGlowDuration = 12; const basePegGlowSizeIncrease = 1.5;
+const bonusBallDuration = 180; // Frames the "NEXT DROP DOUBLED!" message is shown
+const bonusBallChance = 0.01; // Chance to get the *next* drop doubled (Survival)
+const doubleDropDuration = 30 * 60; // Frames Double Drop power-up lasts
+const doubleDropChance = 0.001; // Base chance to trigger Double Drop (Survival)
+const doubleMultiplierDuration = 30 * 60; // Frames 2x Multiplier power-up lasts
+const doubleMultiplierChance = 0.0005; // Base chance to trigger 2x Multiplier (Survival)
+const powerupBetScalingFactor = 1.5; // How much higher bets increase power-up chance
+const dropDelay = 100; // Milliseconds delay for secondary balls (Double Drop, Bonus)
+const maxTrailLength = 25; const trailStartAlpha = 130; const trailEndAlpha = 0; const trailStartWeightFactor = 0.35; const trailEndWeightFactor = 0.05; const powerupMessageDuration = 90; // Frames power-up trigger messages are shown
+const pegGlowDuration = 12; const basePegGlowSizeIncrease = 1.5;
 const baseMultiplierPanelLeftMargin = 10; const baseMultiplierPanelWidth = 70; const baseMultiplierPanelHeight = 300;
 const baseMultiplierPanelTopMargin = 180;
 const baseMultiplierPanelItemHeight = 30; const baseMultiplierPanelItemSpacing = 4; const baseMultiplierPanelBorderRadius = 4; const multiplierDisplayDuration = 180; const maxMultiplierHistory = 8;
@@ -60,17 +66,18 @@ const slotGlowDuration = 20; const slotGlowMaxAlpha = 180; const slotGlowColor =
 const defaultSfxVolume = 0.7;
 const defaultMusicVolume = 0.7;
 const baseMarkerSpeed = 2.5; const baseMarkerSize = 10;
-const survivalDecayStartDelay = 30000;
-const survivalDecayInterval = 30000;
+const survivalDecayStartDelay = 30000; // 30 seconds
+const survivalDecayInterval = 30000; // 30 seconds
 const survivalInitialDecayPercent = 0.10; const survivalDecayIncrement = 0.10;
 const survivalMaxDecayPercent = 1.0;
-const pointsLossWarningStartTime = 5; const pointsLossFlashDurationFrames = 15;
+const pointsLossWarningStartTime = 5; // Seconds before loss to show countdown
+const pointsLossFlashDurationFrames = 15; // Frames the gold text flashes red on loss
 const lossCountdownTextSizeBase = 65; const lossCountdownPulseScale = 1.15;
 const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lossMessageDuration = 90; const lossMessageGlowBlur = 15;
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V07.67"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V07.71"; // <<< VERSION number incremented >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
@@ -81,7 +88,7 @@ const backgroundRippleStartWeight = 1.5;
 const backgroundRippleEndWeight = 0.2;
 
 // Leaderboard Constants
-const leaderboardMaxEntries = 10; // For end-game display
+const leaderboardMaxEntries = 10;
 const baseLeaderboardTextSize = 14;
 const baseLeaderboardTitleSize = 28;
 const baseLeaderboardYOffset = 80;
@@ -98,7 +105,7 @@ const HOVER_BOX_OFFSET_X = 15;
 const HOVER_BOX_BG_COLOR = [35, 30, 55];
 const HOVER_BOX_BORDER_COLOR = [150, 150, 180];
 const HOVER_BOX_TEXT_COLOR = [220, 220, 240];
-const HOVER_ANIM_DURATION = 15; // Shared duration for left desc & right leaderboard
+const HOVER_ANIM_DURATION = 15;
 const NEON_GLOW_MAX_BLUR = 10;
 const NEON_GLOW_COLOR_ALPHA = 150;
 const SLIDE_OFFSCREEN_MARGIN = 20;
@@ -110,10 +117,10 @@ const HOVER_SUB_BULLET_EXTRA_INDENT = 25;
 const HOVER_LEADERBOARD_BASE_WIDTH = 250;
 const HOVER_LEADERBOARD_BASE_PADDING = 12;
 const HOVER_LEADERBOARD_TITLE_SIZE_BASE = 18;
-const HOVER_LEADERBOARD_TEXT_SIZE_BASE = 11; // Base size for leaderboard text
+const HOVER_LEADERBOARD_TEXT_SIZE_BASE = 11;
 const HOVER_LEADERBOARD_ENTRY_SPACING_BASE = 4;
-const HOVER_LEADERBOARD_MAX_ENTRIES = 10; // Display top 10
-const HOVER_LEADERBOARD_OFFSET_X = 15; // Spacing from the right of the menu box
+const HOVER_LEADERBOARD_MAX_ENTRIES = 10;
+const HOVER_LEADERBOARD_OFFSET_X = 15;
 const HOVER_LEADERBOARD_BG_COLOR = [40, 35, 65];
 const HOVER_LEADERBOARD_BORDER_COLOR = [160, 140, 190];
 const HOVER_LEADERBOARD_TEXT_COLOR = [210, 210, 230];
@@ -123,12 +130,12 @@ const HOVER_LEADERBOARD_GOLD_COLOR_STRONG = [255, 190, 0];
 const HOVER_LEADERBOARD_SLIDE_DURATION = HOVER_ANIM_DURATION;
 
 
-// --- Mode Descriptions (Unchanged) ---
+// --- Mode Descriptions ---
 const survivalDescriptionText = `Survival Mode:
 
 Goal: Earn points & climb the global leaderboard.
 Start: Begin with ${initialScoreSurvival} gold.
-Bet: Use the "bet slider" to choose your gold bet per ball.
+Bet: Use the "bet amount" slider to choose your gold bet per ball.
 Reward: Higher bets can yield more gold and points.
 Scoring: Earn gold and points equal to your bet multiplied by the bin's multiplier when a ball lands in a bin.
 Danger: Lose gold every ${survivalDecayInterval / 1000} seconds! (Starts at ${survivalInitialDecayPercent * 100}%, increases by ${survivalDecayIncrement * 100}% each time).
@@ -153,7 +160,13 @@ let currentScale = 1; let scaledCanvasWidth, scaledCanvasHeight; let gameAreaWid
 let gameState = 'LAUNCH_MENU'; let currentGameMode = null; let betAmount = minBetAmount; let gravityScale = defaultActualGravity; let currentBallRadius = baseBallRadius; let titleFont, uiFont, slotFont; let titleY, titleSize; let uiSideMargin, uiScoreTextSize; let buttonTextSize, buttonWidth, buttonHeight; let slotTextSize; let scoreY; let speedSlider, amountSlider, betSlider, ballSizeSlider, sfxVolumeSlider, musicVolumeSlider; let sliderWidth, sliderHandleSize; let bounceAmplitude; let recentHits = []; let multiplierPanelX, multiplierPanelY, multiplierPanelWidth, multiplierPanelHeight, multiplierPanelItemHeight, multiplierPanelItemSpacing, multiplierPanelTextSize, multiplierPanelBorderRadius; let timerTextSize; let powerupTimerDisplayX; let powerupTimerDisplayY; let oddsDisplayYLine1, oddsDisplayYLine2, oddsDisplayTextSize, oddsLineSpacing;
 let creatorTextY1, creatorTextY2, creatorTextSize; let versionTextY, versionTextSize;
 let dropButtonY;
-let bonusBallMessage = '', bonusBallTimer = 0; let isDoubleDropActive = false, doubleDropTimer = 0; let isDoubleMultiplierActive = false, doubleMultiplierTimer = 0; let doubleDropMessage = '', doubleDropMessageTimer = 0; let doubleMultiplierMessage = '', doubleMultiplierMessageTimer = 0; let showTrails = false; let showAnalyzer = true; let blopSound, bonusSound, backgroundMusic; let sfxVolume = defaultSfxVolume;
+let isNextDropBonus = false;
+let bonusBallMessage = '', bonusBallTimer = 0;
+let isDoubleDropActive = false, doubleDropTimer = 0;
+let isDoubleMultiplierActive = false, doubleMultiplierTimer = 0;
+let doubleDropMessage = '', doubleDropMessageTimer = 0;
+let doubleMultiplierMessage = '', doubleMultiplierMessageTimer = 0;
+let showTrails = false; let showAnalyzer = true; let blopSound, bonusSound, backgroundMusic; let sfxVolume = defaultSfxVolume;
 let musicVolume = defaultMusicVolume;
 let audioStarted = false;
 let isGameOverConditionMet = false;
@@ -167,12 +180,12 @@ let launchMenuDiv; let survivalButton, highScoreButton; let menuAlpha = 0; let p
 let transitionState = 'NONE'; let transitionProgress = 0; let transitionTargetState = ''; let transitionCallback = null;
 let isHoveringSurvival = false;
 let isHoveringHighScore = false;
-let survivalHoverAnimProgress = 0; // Left description panel anim
-let highScoreHoverAnimProgress = 0; // Left description panel anim
+let survivalHoverAnimProgress = 0;
+let highScoreHoverAnimProgress = 0;
 
 // --- Hover Leaderboard Variables ---
-let survivalLeaderboardAnimProgress = 0; // Right leaderboard panel anim
-let highScoreLeaderboardAnimProgress = 0; // Right leaderboard panel anim
+let survivalLeaderboardAnimProgress = 0;
+let highScoreLeaderboardAnimProgress = 0;
 let survivalLeaderboardData = null;
 let highScoreLeaderboardData = null;
 let survivalLeaderboardLoading = false;
@@ -182,15 +195,14 @@ let highScoreLeaderboardError = null;
 
 
 let gameOverState = 'NONE';
-let leaderboardData = null; // For end-game screen
-let leaderboardLoading = false; // For end-game screen
-let leaderboardError = null; // For end-game screen
+let leaderboardData = null;
+let leaderboardLoading = false;
+let leaderboardError = null;
 let leaderboardTextSize, leaderboardTitleSize, leaderboardYOffset, leaderboardEntrySpacing;
 let canvas;
 
 
 // ============================ SCALING FUNCTION ============================
-// ... (calculateLayout - no changes needed) ...
 function calculateLayout(w, h) {
     let scaleX = w / baseCanvasWidth; let scaleY = h / baseCanvasHeight; currentScale = min(scaleX, scaleY); currentScale = max(currentScale, 0.4);
     scaledCanvasWidth = baseCanvasWidth * currentScale; scaledCanvasHeight = baseCanvasHeight * currentScale; gameAreaWidth = baseGameAreaWidth * currentScale; menuWidth = baseMenuWidth * currentScale; menuStartX = gameAreaWidth;
@@ -319,7 +331,6 @@ function calculateLayout(w, h) {
 }
 
 // ============================ P5JS Core Functions ============================
-// ... (preload, musicLoadedCallback, setup - no major changes needed, setup calls fetchAllLeaderboards) ...
 function preload() {
     titleFont = 'Impact, sans-serif';
     uiFont = 'Consolas, "Lucida Console", monospace';
@@ -357,9 +368,8 @@ function setup() {
     canvas.elt.style.display = 'block';
     rectMode(CORNER);
     colorMode(RGB);
-    pixelDensity(1); // Important for sharp text/lines
+    pixelDensity(1);
 
-    // HTML Menu Setup
     launchMenuDiv = createDiv('<h3>Choose Mode:</h3>');
     if (!launchMenuDiv) { console.error("FATAL: createDiv failed to create launchMenuDiv!"); alert("Error: Failed to create menu elements. Please refresh."); return; }
     calculateLayout(windowWidth, windowHeight);
@@ -368,10 +378,10 @@ function setup() {
     survivalButton.mousePressed(() => { firstInteraction(); startTransition('PLAYING', selectSurvivalMode); });
     survivalButton.mouseOver(() => {
         isHoveringSurvival = true;
-        isHoveringHighScore = false; // Ensure only one hover state is active
+        isHoveringHighScore = false;
         survivalButton.style('transform', `scale(${menuButtonHoverScale})`);
         survivalButton.style('box-shadow', `0 0 18px 6px ${menuButtonHoverGlow}`);
-        highScoreButton.style('transform', 'scale(1.0)'); // Reset other button
+        highScoreButton.style('transform', 'scale(1.0)');
         highScoreButton.style('box-shadow', 'none');
     });
     survivalButton.mouseOut(() => {
@@ -384,10 +394,10 @@ function setup() {
     highScoreButton.mousePressed(() => { firstInteraction(); startTransition('PLAYING', selectHighScoreMode); });
     highScoreButton.mouseOver(() => {
         isHoveringHighScore = true;
-        isHoveringSurvival = false; // Ensure only one hover state is active
+        isHoveringSurvival = false;
         highScoreButton.style('transform', `scale(${menuButtonHoverScale})`);
         highScoreButton.style('box-shadow', `0 0 18px 6px ${menuButtonHoverGlow}`);
-        survivalButton.style('transform', 'scale(1.0)'); // Reset other button
+        survivalButton.style('transform', 'scale(1.0)');
         survivalButton.style('box-shadow', 'none');
     });
     highScoreButton.mouseOut(() => {
@@ -398,13 +408,11 @@ function setup() {
     launchMenuDiv.hide();
     menuAlpha = 0;
 
-    // Engine & World Setup
     engine = Engine.create();
     world = engine.world;
     engine.world.gravity.y = gravityScale;
     engineInitialized = true;
 
-    // State & UI Initialization
     activeParticles = []; activeRipples = []; backgroundRipples = []; recentHits = [];
     showAnalyzer = true;
     for (let i = 0; i < numSlots; i++) { slotHitCounts[i] = 0; slotBounceState[i] = 0; histogramBarPulseState[i] = 0; slotGlowState[i] = 0; }
@@ -415,7 +423,6 @@ function setup() {
     musicVolumeSlider = { value: defaultMusicVolume * 100, minVal: 0, maxVal: 100, label: "Music Volume", dragging: false, enabled: true };
     calculateLayout(scaledCanvasWidth, scaledCanvasHeight);
 
-    // Position dependent elements
     createPegs();
     setupMenuEffects();
     setupStarfield();
@@ -431,22 +438,18 @@ function setup() {
     createSlotsAndDividers();
     createBoundaries();
 
-    // Reset game over state vars
     gameOverState = 'NONE';
     leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
-    // Reset hover leaderboard vars
     survivalLeaderboardData = null; highScoreLeaderboardData = null;
     survivalLeaderboardLoading = false; highScoreLeaderboardLoading = false;
     survivalLeaderboardError = null; highScoreLeaderboardError = null;
     survivalLeaderboardAnimProgress = 0; highScoreLeaderboardAnimProgress = 0;
 
-
-    // Final Setup
     if (blopSound && blopSound.isLoaded()) blopSound.setVolume(sfxVolumeSlider.value);
     if (bonusSound && bonusSound.isLoaded()) bonusSound.setVolume(sfxVolumeSlider.value);
     Events.on(engine, 'collisionStart', handleCollisions);
     gameState = 'LAUNCH_MENU';
-    fetchAllLeaderboards(); // Fetch leaderboards for hover display on first launch
+    fetchAllLeaderboards();
 }
 function windowResized() {
     calculateLayout(windowWidth, windowHeight);
@@ -476,7 +479,6 @@ function windowResized() {
 }
 
 // ============================ draw() Structure ============================
-// ... (draw - no changes needed) ...
 function draw() {
     if (transitionState !== 'NONE') {
         handleTransition();
@@ -490,7 +492,6 @@ function draw() {
 }
 
 // ============================ drawCurrentState() ============================
-// ... (drawCurrentState - calls updated hover functions) ...
 function drawCurrentState() {
     if (goldLossFlashActive && frameCount > goldLossFlashEndFrame) {
         goldLossFlashActive = false;
@@ -523,17 +524,14 @@ function drawCurrentState() {
         drawMenuBackgroundEffects(menuAlpha);
         drawLaunchTitle(menuAlpha);
 
-        // --- Update Hover Animation Progress ---
-        let animStep = 1.0 / HOVER_ANIM_DURATION; // Shared duration
+        let animStep = 1.0 / HOVER_ANIM_DURATION;
 
-        // Left Description Panel
         if (isHoveringSurvival) { survivalHoverAnimProgress = min(1.0, survivalHoverAnimProgress + animStep); }
         else { survivalHoverAnimProgress = max(0.0, survivalHoverAnimProgress - animStep); }
 
         if (isHoveringHighScore) { highScoreHoverAnimProgress = min(1.0, highScoreHoverAnimProgress + animStep); }
         else { highScoreHoverAnimProgress = max(0.0, highScoreHoverAnimProgress - animStep); }
 
-        // Right Leaderboard Panel
         if (isHoveringSurvival) { survivalLeaderboardAnimProgress = min(1.0, survivalLeaderboardAnimProgress + animStep); }
         else { survivalLeaderboardAnimProgress = max(0.0, survivalLeaderboardAnimProgress - animStep); }
 
@@ -541,30 +539,21 @@ function drawCurrentState() {
         else { highScoreLeaderboardAnimProgress = max(0.0, highScoreLeaderboardAnimProgress - animStep); }
 
 
-        // --- Draw Hover Pop-ups ---
         if (launchMenuDiv && transitionState === 'NONE') {
-            // Draw Left Description Pop-up
             if (survivalHoverAnimProgress > 0) {
-                // Survival Description slides from TOP
                 drawHoverDescription(survivalButton, survivalDescriptionText, survivalHoverAnimProgress, 'TOP', 'SURVIVAL');
             }
             if (highScoreHoverAnimProgress > 0) {
-                // <<< CHANGED: High Score Description slides from BOTTOM >>>
                 drawHoverDescription(highScoreButton, highScoreDescriptionText, highScoreHoverAnimProgress, 'BOTTOM', 'HIGHSCORE');
             }
-
-            // Draw Right Leaderboard Pop-up
             if (survivalLeaderboardAnimProgress > 0) {
-                // <<< CHANGED: Survival Leaderboard slides from BOTTOM >>>
                 drawHoverLeaderboard('survival', survivalLeaderboardAnimProgress, survivalLeaderboardData, survivalLeaderboardLoading, survivalLeaderboardError);
             }
             if (highScoreLeaderboardAnimProgress > 0) {
-                 // <<< CHANGED: High Score Leaderboard slides from TOP >>>
                 drawHoverLeaderboard('highscore', highScoreLeaderboardAnimProgress, highScoreLeaderboardData, highScoreLeaderboardLoading, highScoreLeaderboardError);
             }
         }
 
-        // Draw Creator text drawing for LAUNCH_MENU
         if (menuAlpha > 50) {
             push();
             textFont(uiFont);
@@ -599,7 +588,12 @@ function drawCurrentState() {
         push(); updateAndDrawParticles(); pop();
         push(); drawBalls(); pop();
         push(); drawMultiplierPanel();
-        if (currentGameMode === 'SURVIVAL') { push(); drawPowerupTimer(); handlePowerupTimersAndVisuals(); pop(); }
+        if (currentGameMode === 'SURVIVAL') {
+            push();
+            drawPowerupTimer();
+            handlePowerupTimersAndVisuals();
+            pop();
+        }
         push(); drawMarker(); pop(); if (showAnalyzer) { push(); drawStatisticsBars(); pop(); }
         drawTitle();
         drawGameUI();
@@ -700,7 +694,7 @@ function drawCurrentState() {
                  } else {
                      console.error("Cannot show leaderboard form - element not found!");
                      gameOverState = 'SHOWING_LEADERBOARD';
-                     fetchLeaderboardData('endgame', currentGameMode); // Pass mode for endgame fetch
+                     fetchLeaderboardData('endgame', currentGameMode);
                  }
              });
              isGameOverFromDecay = false;
@@ -709,7 +703,6 @@ function drawCurrentState() {
 }
 
 // ============================ Transition Functions ============================
-// ... (startTransition, handleTransition, drawTransitionOverlay - no changes needed) ...
 function startTransition(targetState, callback = null) {
     if (transitionState !== 'NONE') return;
     transitionTargetState = targetState;
@@ -720,7 +713,6 @@ function startTransition(targetState, callback = null) {
     if(gameState === 'GAME_OVER' || gameOverState === 'SHOWING_FORM') {
         hideLeaderboardForm();
     }
-    // Reset hover states for panels during transition
     isHoveringSurvival = false;
     isHoveringHighScore = false;
     survivalHoverAnimProgress = 0;
@@ -748,9 +740,8 @@ function handleTransition() {
                 isHoveringHighScore = false;
                 survivalHoverAnimProgress = 0;
                 highScoreHoverAnimProgress = 0;
-                survivalLeaderboardAnimProgress = 0; // Reset leaderboard anim on fade in
+                survivalLeaderboardAnimProgress = 0;
                 highScoreLeaderboardAnimProgress = 0;
-                // Fetch leaderboards again when returning to menu
                 fetchAllLeaderboards();
             }
             if(previousGameState === 'GAME_OVER' && gameState !== 'GAME_OVER') { hideLeaderboardForm(); }
@@ -779,14 +770,12 @@ function drawTransitionOverlay() {
 }
 
 // ============================ Mode Selection & Start ============================
-// ... (selectSurvivalMode, selectHighScoreMode, prepareGameForMode - no changes needed) ...
 function selectSurvivalMode() { currentGameMode = 'SURVIVAL'; prepareGameForMode(); }
 function selectHighScoreMode() { currentGameMode = 'HIGHSCORE'; prepareGameForMode(); }
 function prepareGameForMode() { if (!currentGameMode) { console.error("Cannot prepare game: No mode selected!"); startTransition('LAUNCH_MENU', returnToLaunchMenuCleanup); return; } isGameOverConditionMet = false; highScoreEnded = false; resetGame(); }
 
 
 // ============================ Helper Functions ============================
-// ... (getLaunchMenuCanvasRect - no changes needed) ...
 function getLaunchMenuCanvasRect() {
     if (!launchMenuDiv) return null;
     const menuPos = launchMenuDiv.position();
@@ -803,9 +792,6 @@ function getLaunchMenuCanvasRect() {
 
 
 // ============================ Starfield & Effects Setup / Drawing ============================
-// ... (setupMenuEffects, drawMenuBackgroundEffects, setupStarfield, drawStarfield - no changes needed) ...
-// ... (createParticleBurst, updateAndDrawParticles, createRippleEffect, updateAndDrawRipples - no changes needed) ...
-// ... (createBackgroundRipple, updateAndDrawBackgroundRipples - no changes needed) ...
 function setupMenuEffects() { colorMode(RGB, 255); parallaxLayers = []; let baseRadius = basePegRadius * currentScale * 1.5; for (let i = 0; i < parallaxLayersCount; i++) { let layer = []; let layerRadius = baseRadius * (1 - i * 0.2); for (let j = 0; j < parallaxPegsPerLayer; j++) { layer.push({ x: random(scaledCanvasWidth), y: random(scaledCanvasHeight), radius: layerRadius }); } parallaxLayers.push(layer); } menuParticles = []; const scaledParticleSpeed = menuParticleBaseSpeed * currentScale; for (let i = 0; i < menuParticleCount; i++) { menuParticles.push({ x: random(scaledCanvasWidth), y: random(scaledCanvasHeight), vx: random(-scaledParticleSpeed, scaledParticleSpeed), vy: random(-scaledParticleSpeed, scaledParticleSpeed), lifespan: random(menuParticleLifespan * 0.5, menuParticleLifespan), maxLifespan: menuParticleLifespan, radius: random(1, 3) * currentScale, color: [random(150, 255), random(150, 255), random(220, 255)] }); } menuFallingBalls = []; let scaledBallRad = baseBallRadius * currentScale * 0.8; let baseFallingColor = color(neonBlue[0], neonBlue[1], neonBlue[2]); colorMode(HSB, 360, 100, 100, 1); for (let i = 0; i < menuFallingBallCount; i++) { let h = hue(baseFallingColor) + random(-15, 15); let s = saturation(baseFallingColor) * random(0.85, 1.0); let b = brightness(baseFallingColor) * random(0.9, 1.1); let a = random(0.2, 0.6); let variedColor = color(h, s, b, a); colorMode(RGB, 255); menuFallingBalls.push({ x: random(scaledCanvasWidth), y: random(-scaledCanvasHeight * 0.5, 0), vy: random(menuBackgroundBallSpeedMin, menuBackgroundBallSpeedMax) * currentScale, radius: scaledBallRad * random(0.7, 1.1), color: variedColor }); } colorMode(RGB, 255); }
 function drawMenuBackgroundEffects(overallAlpha) { if (overallAlpha <= 0) return; push(); let centerX = scaledCanvasWidth / 2; let centerY = scaledCanvasHeight / 2; let mouseXConstrained = constrain(mouseX, 0, width); let mouseYConstrained = constrain(mouseY, 0, height); let mouseOffsetX = (mouseXConstrained - centerX) * parallaxMaxOffsetFactor; let mouseOffsetY = (mouseYConstrained - centerY) * parallaxMaxOffsetFactor; noStroke(); for (let i = 0; i < parallaxLayers.length; i++) { let layer = parallaxLayers[i]; let layerFactor = (parallaxLayers.length - i) / parallaxLayers.length; let currentOffsetX = mouseOffsetX * layerFactor; let currentOffsetY = mouseOffsetY * layerFactor; let layerAlpha = 100 * (1 - i * 0.2); fill(180, 200, 220, layerAlpha * (overallAlpha / 255)); for (let peg of layer) { ellipse(peg.x + currentOffsetX, peg.y + currentOffsetY, peg.radius * 2); } } noStroke(); let scaledParticleSpeed = menuParticleBaseSpeed * currentScale; for (let i = menuParticles.length - 1; i >= 0; i--) { let p = menuParticles[i]; if (overallAlpha > 10) { p.x += p.vx; p.y += p.vy; p.lifespan--; } if (p.x < -p.radius) p.x = scaledCanvasWidth + p.radius; if (p.x > scaledCanvasWidth + p.radius) p.x = -p.radius; if (p.y < -p.radius) p.y = scaledCanvasHeight + p.radius; if (p.y > scaledCanvasHeight + p.radius) p.y = -p.radius; if (p.lifespan <= 0) { p.x = random(scaledCanvasWidth); p.y = random(scaledCanvasHeight); p.vx = random(-scaledParticleSpeed, scaledParticleSpeed); p.vy = random(-scaledParticleSpeed, scaledParticleSpeed); p.lifespan = random(menuParticleLifespan * 0.5, menuParticleLifespan); } else { let lifeRatio = p.lifespan / p.maxLifespan; let particleAlpha = 150 * sin(lifeRatio * PI); fill(p.color[0], p.color[1], p.color[2], particleAlpha * (overallAlpha / 255)); ellipse(p.x, p.y, p.radius * 2); } } noStroke(); let gravityEffect = menuBackgroundBallGravity * currentScale; for (let i = menuFallingBalls.length - 1; i >= 0; i--) { let ball = menuFallingBalls[i]; if (overallAlpha > 10) { ball.vy += gravityEffect; ball.y += ball.vy; } let r = red(ball.color); let g = green(ball.color); let b = blue(ball.color); let baseAlpha = alpha(ball.color); fill(r, g, b, baseAlpha * 255 * (overallAlpha / 255)); ellipse(ball.x, ball.y, ball.radius * 2); if (ball.y > scaledCanvasHeight + ball.radius * 2) { ball.x = random(scaledCanvasWidth); ball.y = -ball.radius * 2 - random(50 * currentScale); ball.vy = random(menuBackgroundBallSpeedMin, menuBackgroundBallSpeedMax) * currentScale; } } pop(); }
 function setupStarfield() { starfield = []; shootingStars = []; colorMode(HSB, 360, 100, 100, 1); for (let i = 0; i < numStars; i++) { let size = random(0.8, 3.8) * currentScale; let depth = map(size, 0.8 * currentScale, 3.8 * currentScale, 0.1, 1.0); let speedMult = lerp(1.0, 1.0 + baseStarParallaxFactor, depth); starfield.push({ x: random(gameAreaWidth), y: random(scaledCanvasHeight), size: size, depth: depth, brightness: random(60, 100), alpha: random(0.45, 1.0), base_vx: random(-0.1, 0.1) * starfieldSpeedFactor * currentScale * speedMult, base_vy: random(0.05, 0.2) * starfieldSpeedFactor * currentScale * speedMult, h: random(240, 300), s: random(50, 90), twinkleOffset: random(TWO_PI) }); } colorMode(RGB, 255); }
@@ -819,7 +805,7 @@ function updateAndDrawBackgroundRipples() { push(); noFill(); for (let i = backg
 
 // ============================ Drawing Helpers ============================
 
-// --- Icon Drawing Functions (Moved to global scope) ---
+// --- Icon Drawing Functions ---
 function drawCoinIcon(x, y, size, alpha, animProgress = 0) { push(); let pulseScale = lerp(1.0, 1.1, animProgress); fill(255, 215, 0, alpha); noStroke(); ellipse(x + size / 2, y + size / 2, size * pulseScale, size * pulseScale); fill(200, 160, 0, alpha); ellipse(x + size / 2, y + size / 2, size * 0.6 * pulseScale, size * 0.6 * pulseScale); pop(); }
 function drawBallIcon(x, y, size, alpha, animProgress = 0) { push(); let pulseScale = lerp(1.0, 1.1, animProgress); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha); noStroke(); ellipse(x + size / 2, y + size / 2, size * pulseScale, size * pulseScale); pop(); }
 function drawLockIcon(x, y, size, alpha, animProgress = 0) { push(); let bodyH = size * 0.6; let bodyW = size * 0.7; let shackleThick = size * 0.15; let shackleDiam = size * 0.5; let pulseShift = lerp(0, size * 0.05, animProgress); fill(180, 180, 180, alpha); noStroke(); rect(x + (size - bodyW) / 2, y + size * 0.3 + pulseShift, bodyW, bodyH, size * 0.1); noFill(); stroke(220, 220, 220, alpha); strokeWeight(shackleThick); arc(x + size / 2, y + size * 0.3 + pulseShift, shackleDiam, shackleDiam, PI, TWO_PI); pop(); }
@@ -839,20 +825,19 @@ function drawCrossedIcon(x, y, size, alpha, animProgress = 0, drawBaseIconFunc =
 function drawBallCountAnimation(x, y, size, alpha) { push(); let countSpeed = 0.15; let currentBallNum = highScoreBallsTotal - floor((frameCount * countSpeed) % (highScoreBallsTotal + 1)); textAlign(RIGHT, TOP); textSize(size * 0.9); fill(200, 200, 230, alpha); let numStr = str(currentBallNum); text(numStr, x, y); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha * 0.8); noStroke(); ellipse(x - textWidth(numStr) - size*0.3 , y + size * 0.4, size*0.5); pop(); }
 function drawSurvivalCornerAnimation(x, y, w, h, alpha) { push(); let numCoins = 3; let coinSize = h * 0.6; let fallDist = h * 1.5; let loopTime = 2.0; for (let i = 0; i < numCoins; i++) { let timeOffset = (i / numCoins) * loopTime; let currentLoopTime = (millis() / 1000 + timeOffset) % loopTime; let progress = currentLoopTime / loopTime; let currentY = y + lerp(-coinSize, fallDist, progress * progress); let currentAlpha = alpha * sin(progress * PI); if (currentAlpha > 0 && currentY < y + h + coinSize) { let currentX = x + w / 2 - coinSize / 2 + sin(progress * PI * 3) * w * 0.1; drawCoinIcon(currentX, currentY, coinSize, currentAlpha, 0); } } pop(); }
 
-// --- Updated: Hover Leaderboard Drawing Function ---
+// --- Hover Leaderboard Drawing Function ---
 function drawHoverLeaderboard(mode, animProgress, data, loading, error) {
     if (!launchMenuDiv || animProgress <= 0) return;
 
     push();
 
-    // --- Config ---
     const scaledPadding = HOVER_LEADERBOARD_BASE_PADDING * currentScale;
     const scaledBoxWidth = HOVER_LEADERBOARD_BASE_WIDTH * currentScale;
     const scaledTitleSize = max(10, HOVER_LEADERBOARD_TITLE_SIZE_BASE * currentScale);
     const scaledTextSize = max(7, HOVER_LEADERBOARD_TEXT_SIZE_BASE * currentScale);
     const scaledEntrySpacing = HOVER_LEADERBOARD_ENTRY_SPACING_BASE * currentScale;
     const entryLineHeight = scaledTextSize + scaledEntrySpacing;
-    const titleAreaHeight = scaledTitleSize + scaledPadding * 1.5; // Space for title + padding below
+    const titleAreaHeight = scaledTitleSize + scaledPadding * 1.5;
 
     const scaledOffsetX = HOVER_LEADERBOARD_OFFSET_X * currentScale;
     const targetBgAlpha = 240;
@@ -860,61 +845,51 @@ function drawHoverLeaderboard(mode, animProgress, data, loading, error) {
     const targetTextAlpha = 255;
     const scaledSlideMargin = SLIDE_OFFSCREEN_MARGIN * currentScale;
 
-    // --- Calculate Height ---
-    let entriesToShow = HOVER_LEADERBOARD_MAX_ENTRIES; // Use the constant (now 10)
+    let entriesToShow = HOVER_LEADERBOARD_MAX_ENTRIES;
     let contentHeight = 0;
     if (loading || error) {
-        contentHeight = entryLineHeight * 2; // Estimate space for loading/error message
+        contentHeight = entryLineHeight * 2;
     } else if (data) {
         contentHeight = entryLineHeight * min(data.length, entriesToShow);
         if (data.length == 0) {
-           contentHeight = entryLineHeight; // Space for "Empty" message
+           contentHeight = entryLineHeight;
         }
     } else {
-        contentHeight = entryLineHeight; // Space for potential message
+        contentHeight = entryLineHeight;
     }
-    const boxHeight = titleAreaHeight + contentHeight + scaledPadding; // Total height
+    const boxHeight = titleAreaHeight + contentHeight + scaledPadding;
 
-    // --- Positioning & Animation ---
     const menuRect = getLaunchMenuCanvasRect();
-    if (!menuRect) { pop(); return; } // Exit if menu position is not available
+    if (!menuRect) { pop(); return; }
 
-    // Calculate target position (Right of menu, vertically centered)
     let targetBoxX = menuRect.x + menuRect.width + scaledOffsetX;
     let targetBoxY = menuRect.y + menuRect.height / 2 - boxHeight / 2;
-
-    // Clamp target Y to stay within canvas bounds (with padding)
     targetBoxY = constrain(targetBoxY, scaledPadding, scaledCanvasHeight - boxHeight - scaledPadding);
-    // Clamp target X
     targetBoxX = min(targetBoxX, scaledCanvasWidth - scaledBoxWidth - scaledPadding);
-    targetBoxX = max(targetBoxX, scaledPadding); // Ensure it doesn't go off left
+    targetBoxX = max(targetBoxX, scaledPadding);
 
-    // Calculate animation based on mode (VERTICAL slides)
-    const easedProgress = 1 - pow(1 - animProgress, 3); // Ease out cubic
+    const easedProgress = 1 - pow(1 - animProgress, 3);
     let startBoxY;
-    let currentBoxX = targetBoxX; // X position is fixed at target
+    let currentBoxX = targetBoxX;
     let currentBoxY;
 
-    if (mode === 'survival') { // Slide UP from BOTTOM
+    if (mode === 'survival') {
         startBoxY = scaledCanvasHeight + scaledSlideMargin;
         currentBoxY = lerp(startBoxY, targetBoxY, easedProgress);
-    } else { // High Score: Slide DOWN from TOP
+    } else {
         startBoxY = -boxHeight - scaledSlideMargin;
         currentBoxY = lerp(startBoxY, targetBoxY, easedProgress);
     }
 
-    // Apply alpha fade-in based on progress
     let finalBgAlpha = targetBgAlpha * easedProgress;
     let finalBorderAlpha = targetBorderAlpha * easedProgress;
     let finalTextAlpha = targetTextAlpha * easedProgress;
 
-    // --- Drawing Box ---
     fill(HOVER_LEADERBOARD_BG_COLOR[0], HOVER_LEADERBOARD_BG_COLOR[1], HOVER_LEADERBOARD_BG_COLOR[2], finalBgAlpha);
     stroke(HOVER_LEADERBOARD_BORDER_COLOR[0], HOVER_LEADERBOARD_BORDER_COLOR[1], HOVER_LEADERBOARD_BORDER_COLOR[2], finalBorderAlpha);
     strokeWeight(max(1, 1.5 * currentScale));
-    rect(currentBoxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale); // Use current animated Y
+    rect(currentBoxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale);
 
-    // --- Drawing Title ---
     fill(HOVER_LEADERBOARD_TEXT_COLOR[0], HOVER_LEADERBOARD_TEXT_COLOR[1], HOVER_LEADERBOARD_TEXT_COLOR[2], finalTextAlpha);
     textFont(uiFont);
     textSize(scaledTitleSize);
@@ -922,30 +897,23 @@ function drawHoverLeaderboard(mode, animProgress, data, loading, error) {
     let titleText = mode === 'survival' ? "Survival Leaders" : "High Score Leaders";
     text(titleText, currentBoxX + scaledBoxWidth / 2, currentBoxY + scaledPadding);
 
-    // --- Drawing Content (with noSmooth for sharpness) ---
-    push(); // Isolate noSmooth setting
-    noSmooth(); // Attempt to make text sharper
+    push();
+    noSmooth();
 
-    let currentTextYDraw = currentBoxY + titleAreaHeight; // Y position for drawing text lines
+    let currentTextYDraw = currentBoxY + titleAreaHeight;
     let textStartX = currentBoxX + scaledPadding;
-    let textWidthAvailable = scaledBoxWidth - 2 * scaledPadding;
-
     textSize(scaledTextSize);
     textAlign(LEFT, TOP);
-    textStyle(NORMAL); // Ensure normal style unless overridden
+    textStyle(NORMAL);
 
-    // Column widths (approximate based on max expected content)
-    const maxRankStr = `${entriesToShow}.`; // Use the correct max number
-    const maxNameStr = "WWWWWWWWWW"; // 10 chars
-    const maxScoreStr = "9,999,999"; // Example score format
+    const maxRankStr = `${entriesToShow}.`;
+    const maxNameStr = "WWWWWWWWWW";
+    const maxScoreStr = "9,999,999";
     const rankColWidth = textWidth(maxRankStr) + 5 * currentScale;
     const nameColWidth = textWidth(maxNameStr) + 10 * currentScale;
-    const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale;
-    const totalWidthEst = rankColWidth + nameColWidth + scoreColWidth;
-    // Adjust spacing dynamically if needed, or use fixed positions
     const rankX = textStartX;
-    const nameX = rankX + rankColWidth; // Simple fixed spacing might be clearer
-    const scoreAlignRightX = currentBoxX + scaledBoxWidth - scaledPadding; // Align score to the right edge
+    const nameX = rankX + rankColWidth;
+    const scoreAlignRightX = currentBoxX + scaledBoxWidth - scaledPadding;
 
     if (loading) {
         fill(180, 180, 200, finalTextAlpha);
@@ -974,44 +942,35 @@ function drawHoverLeaderboard(mode, animProgress, data, loading, error) {
             if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); }
             fill(entryColor);
 
-            // Draw Rank
-            textAlign(LEFT, TOP);
-            text(rankStr, rankX, currentTextYDraw);
-
-            // Draw Name
-            textAlign(LEFT, TOP);
-            text(nameStr, nameX, currentTextYDraw);
-
-            // Draw Score (Aligned Right)
-            textAlign(RIGHT, TOP);
-            text(scoreStr, scoreAlignRightX, currentTextYDraw);
+            textAlign(LEFT, TOP); text(rankStr, rankX, currentTextYDraw);
+            textAlign(LEFT, TOP); text(nameStr, nameX, currentTextYDraw);
+            textAlign(RIGHT, TOP); text(scoreStr, scoreAlignRightX, currentTextYDraw);
 
             currentTextYDraw += entryLineHeight;
         }
-        textStyle(NORMAL); // Reset text style
-    } else if (data) { // Data received, but empty
+        textStyle(NORMAL);
+    } else if (data) {
         fill(180, 180, 200, finalTextAlpha);
         textAlign(CENTER, TOP);
         text("Leaderboard Empty", currentBoxX + scaledBoxWidth / 2, currentTextYDraw);
-    } else { // No data yet (should be covered by loading/error)
+    } else {
         fill(150, 150, 160, finalTextAlpha);
         textAlign(CENTER, TOP);
         text("No data", currentBoxX + scaledBoxWidth / 2, currentTextYDraw);
     }
 
-    smooth(); // Restore default smoothing
-    pop(); // Restore drawing settings
+    smooth();
+    pop();
 
-    pop(); // Restore transform/style state for the whole function
+    pop();
 }
 
-
-// --- Updated: drawHoverDescription ---
+// --- Updated: drawHoverDescription - Refined highlighting ---
 function drawHoverDescription(button, description, animProgress, slideDirection = 'TOP', mode = null) {
     if (!button || animProgress <= 0) return;
     push();
 
-    // --- Config (Mostly unchanged) ---
+    // --- Config ---
     const scaledPadding = HOVER_BOX_BASE_PADDING * currentScale;
     const scaledBoxWidth = HOVER_BOX_BASE_WIDTH * currentScale;
     const scaledTextSize = max(8, HOVER_BOX_BASE_TEXT_SIZE * currentScale);
@@ -1027,36 +986,105 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
     const targetTextAlpha = 255;
     const scaledSlideMargin = SLIDE_OFFSCREEN_MARGIN * currentScale;
 
-    // --- Text Wrapping & Height Calculation (Unchanged) ---
-    textFont(uiFont); textSize(scaledTextSize); textAlign(LEFT, TOP); let originalLines = description.split('\n'); let lineObjects = []; let currentTextY = scaledPadding; let isInsideBulletParagraph = false; let currentBulletIndentOffset = 0; for (let lineIndex = 0; lineIndex < originalLines.length; lineIndex++) { let line = originalLines[lineIndex].trim(); let isEmpty = line === ''; let keywords = []; let isPowerupBulletLine = line.startsWith('Double Drop:') || line.startsWith('2x Multiplier:') || line.startsWith('Extra Ball:'); let isPowerupHeaderLine = line.includes('Power Ups Chances :'); let startsBullet = line.startsWith('Goal:') || line.startsWith('Start:') || line.startsWith('Bet:') || line.startsWith('Reward:') || line.startsWith('Scoring:') || line.startsWith('Danger:') || line.startsWith('End:') || line.startsWith('Race') || line.startsWith('Purity:') || isPowerupHeaderLine || isPowerupBulletLine || line.startsWith('Survival Mode:') || line.startsWith('High Score Mode:'); if (isEmpty) { lineObjects.push({ text: '', y: currentTextY, contains: [], isBulletStart: false, isPowerupBullet: false, isPowerupHeader: false, indent: false, bulletIndentOffset: 0 }); currentTextY += lineHeight * 0.5; isInsideBulletParagraph = false; currentBulletIndentOffset = 0; continue; } if (startsBullet) { isInsideBulletParagraph = true; currentBulletIndentOffset = isPowerupBulletLine ? scaledSubBulletExtraIndent : 0; if (line.includes('Goal:')) keywords.push('Goal'); if (line.includes('Start:')) keywords.push('Start'); if (line.includes('Bet:')) keywords.push('Bet'); if (line.includes('"bet slider"')) keywords.push('bet slider'); if (line.includes('Reward:')) keywords.push('Reward'); if (line.includes('Scoring:')) keywords.push('Scoring'); if (line.includes('Danger:')) keywords.push('Danger'); if (line.includes('End:')) keywords.push('End'); if (line.includes('Race')) keywords.push('Race'); if (line.includes('Purity:')) keywords.push('Purity'); if (isPowerupHeaderLine) keywords.push('Power-ups'); if (isPowerupBulletLine && line.includes('Double Drop')) keywords.push('Double Drop'); if (isPowerupBulletLine && line.includes('2x Multiplier')) keywords.push('2x Multiplier'); if (isPowerupBulletLine && line.includes('Extra Ball')) keywords.push('Extra Ball'); } else { if (!isInsideBulletParagraph) { currentBulletIndentOffset = 0; } } let words = line.split(' '); if (words.length === 0 || (words.length === 1 && words[0] === '')) { lineObjects.push({ text: '', y: currentTextY, contains: keywords, isBulletStart: startsBullet, isPowerupBullet: isPowerupBulletLine, isPowerupHeader: isPowerupHeaderLine, indent: false, bulletIndentOffset: currentBulletIndentOffset }); currentTextY += lineHeight; continue; } let hasIconSpace = startsBullet && !line.startsWith('Survival Mode:') && !line.startsWith('High Score Mode:'); let availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (hasIconSpace ? iconAreaWidth : 0); let currentLineText = words[0]; let isFirstLineOfThisChunk = true; for (let i = 1; i < words.length; i++) { let testLine = currentLineText + ' ' + words[i]; let testWidth = textWidth(testLine); if (testWidth > availableWidth && currentLineText !== "") { let originalLineHadIcon = isFirstLineOfThisChunk && hasIconSpace; lineObjects.push({ text: currentLineText, y: currentTextY, contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [], isBulletStart: originalLineHadIcon, isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine, isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine, indent: true, bulletIndentOffset: currentBulletIndentOffset }); currentTextY += lineHeight; currentLineText = words[i]; isFirstLineOfThisChunk = false; availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (isInsideBulletParagraph ? iconAreaWidth : 0); } else { currentLineText = testLine; } } let originalLineHadIconLast = isFirstLineOfThisChunk && hasIconSpace; lineObjects.push({ text: currentLineText, y: currentTextY, contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [], isBulletStart: originalLineHadIconLast, isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine, isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine, indent: !isFirstLineOfThisChunk, bulletIndentOffset: currentBulletIndentOffset }); currentTextY += lineHeight; }
+    // --- Text Wrapping & Height Calculation ---
+    textFont(uiFont); textSize(scaledTextSize); textAlign(LEFT, TOP);
+    let originalLines = description.split('\n');
+    let lineObjects = [];
+    let currentTextY = scaledPadding;
+    let isInsideBulletParagraph = false;
+    let currentBulletIndentOffset = 0;
+    for (let lineIndex = 0; lineIndex < originalLines.length; lineIndex++) {
+        let line = originalLines[lineIndex].trim();
+        let isEmpty = line === '';
+        let keywords = [];
+        let isPowerupBulletLine = line.startsWith('Double Drop:') || line.startsWith('2x Multiplier:') || line.startsWith('Extra Ball:');
+        let isPowerupHeaderLine = line.includes('Power Ups Chances :');
+        let startsBullet = line.startsWith('Goal:') || line.startsWith('Start:') || line.startsWith('Bet:') || line.startsWith('Reward:') || line.startsWith('Scoring:') || line.startsWith('Danger:') || line.startsWith('End:') || line.startsWith('Race') || line.startsWith('Purity:') || isPowerupHeaderLine || isPowerupBulletLine || line.startsWith('Survival Mode:') || line.startsWith('High Score Mode:');
+
+        if (isEmpty) {
+            lineObjects.push({ text: '', y: currentTextY, contains: [], isBulletStart: false, isPowerupBullet: false, isPowerupHeader: false, indent: false, bulletIndentOffset: 0 });
+            currentTextY += lineHeight * 0.5;
+            isInsideBulletParagraph = false;
+            currentBulletIndentOffset = 0;
+            continue;
+        }
+
+        if (startsBullet) {
+            isInsideBulletParagraph = true;
+            currentBulletIndentOffset = isPowerupBulletLine ? scaledSubBulletExtraIndent : 0;
+            if (line.includes('Goal:')) keywords.push('Goal');
+            if (line.includes('Start:')) keywords.push('Start');
+            if (line.includes('Bet:')) keywords.push('Bet');
+            if (line.includes('Reward:')) keywords.push('Reward');
+            if (line.includes('Scoring:')) keywords.push('Scoring');
+            if (line.includes('Danger:')) keywords.push('Danger');
+            if (line.includes('End:')) keywords.push('End');
+            if (line.includes('Race')) keywords.push('Race');
+            if (line.includes('Purity:')) keywords.push('Purity');
+            if (isPowerupHeaderLine) keywords.push('Power-ups');
+            if (isPowerupBulletLine && line.includes('Double Drop')) keywords.push('Double Drop');
+            if (isPowerupBulletLine && line.includes('2x Multiplier')) keywords.push('2x Multiplier');
+            if (isPowerupBulletLine && line.includes('Extra Ball')) keywords.push('Extra Ball');
+        } else {
+            if (!isInsideBulletParagraph) {
+                currentBulletIndentOffset = 0;
+            }
+        }
+
+        let words = line.split(' ');
+        if (words.length === 0 || (words.length === 1 && words[0] === '')) {
+            lineObjects.push({ text: '', y: currentTextY, contains: keywords, isBulletStart: startsBullet, isPowerupBullet: isPowerupBulletLine, isPowerupHeader: isPowerupHeaderLine, indent: false, bulletIndentOffset: currentBulletIndentOffset });
+            currentTextY += lineHeight;
+            continue;
+        }
+
+        let hasIconSpace = startsBullet && !line.startsWith('Survival Mode:') && !line.startsWith('High Score Mode:');
+        let availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (hasIconSpace ? iconAreaWidth : 0);
+        let currentLineText = words[0];
+        let isFirstLineOfThisChunk = true;
+
+        for (let i = 1; i < words.length; i++) {
+            let testLine = currentLineText + ' ' + words[i];
+            let testWidth = textWidth(testLine);
+            if (testWidth > availableWidth && currentLineText !== "") {
+                let originalLineHadIcon = isFirstLineOfThisChunk && hasIconSpace;
+                lineObjects.push({ text: currentLineText, y: currentTextY, contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [], isBulletStart: originalLineHadIcon, isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine, isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine, indent: true, bulletIndentOffset: currentBulletIndentOffset });
+                currentTextY += lineHeight;
+                currentLineText = words[i];
+                isFirstLineOfThisChunk = false;
+                availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (isInsideBulletParagraph ? iconAreaWidth : 0);
+            } else {
+                currentLineText = testLine;
+            }
+        }
+        let originalLineHadIconLast = isFirstLineOfThisChunk && hasIconSpace;
+        lineObjects.push({ text: currentLineText, y: currentTextY, contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [], isBulletStart: originalLineHadIconLast, isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine, isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine, indent: !isFirstLineOfThisChunk, bulletIndentOffset: currentBulletIndentOffset });
+        currentTextY += lineHeight;
+    }
     const boxHeight = currentTextY - lineHeight + scaledPadding * 2;
+
 
     // --- Positioning & Animation ---
     const buttonPos = button.position(); const buttonSize = button.size(); const canvasOffsetX = (windowWidth - scaledCanvasWidth) / 2;
 
-    // Calculate X position (Always left of the menu)
     let targetBoxX = buttonPos.x - canvasOffsetX - scaledBoxWidth - scaledOffsetX;
-    targetBoxX = max(scaledPadding, targetBoxX); // Clamp left
-    targetBoxX = min(targetBoxX, scaledCanvasWidth - scaledBoxWidth - scaledPadding); // Clamp right (less likely needed now)
-    let currentBoxX = targetBoxX; // X doesn't animate for vertical slides
+    targetBoxX = max(scaledPadding, targetBoxX);
+    targetBoxX = min(targetBoxX, scaledCanvasWidth - scaledBoxWidth - scaledPadding);
+    let currentBoxX = targetBoxX;
 
-    // Calculate target Y (Centered vertically)
     let idealTargetBoxY = scaledCanvasHeight / 2 - boxHeight / 2;
     let targetBoxY = constrain(idealTargetBoxY, scaledPadding, scaledCanvasHeight - boxHeight - scaledPadding);
 
-    // Calculate starting Y based on slideDirection
     let startBoxY;
-    if (slideDirection === 'TOP') { // Survival Mode Desc
+    if (slideDirection === 'TOP') {
         startBoxY = -boxHeight - scaledSlideMargin;
-    } else { // High Score Mode Desc (slideDirection === 'BOTTOM')
+    } else {
         startBoxY = scaledCanvasHeight + scaledSlideMargin;
     }
 
-    // Eased animation for Y position
     const easedProgress = 1 - pow(1 - animProgress, 3);
     let currentBoxY = lerp(startBoxY, targetBoxY, easedProgress);
 
-    // Calculate alpha and glow
     let finalBgAlpha = targetBgAlpha * easedProgress;
     let finalBorderAlpha = targetBorderAlpha * easedProgress;
     let finalTextAlpha = targetTextAlpha * easedProgress;
@@ -1066,13 +1094,13 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
     fill(HOVER_BOX_BG_COLOR[0], HOVER_BOX_BG_COLOR[1], HOVER_BOX_BG_COLOR[2], finalBgAlpha);
     stroke(HOVER_BOX_BORDER_COLOR[0], HOVER_BOX_BORDER_COLOR[1], HOVER_BOX_BORDER_COLOR[2], finalBorderAlpha);
     strokeWeight(max(1, 1.5 * currentScale));
-    rect(currentBoxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale); // Use current X and Y
+    rect(currentBoxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale);
 
     // --- Drawing Content (Icons, Text, Highlights) ---
-    push(); // Isolate noSmooth setting
-    noSmooth(); // Try for sharper text
+    push();
+    noSmooth();
 
-    noStroke(); // Reset stroke for text/icons
+    noStroke();
     drawingContext.shadowBlur = finalGlowAmount;
     let glowColor = color(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], (NEON_GLOW_COLOR_ALPHA / 255) * finalTextAlpha);
     drawingContext.shadowColor = glowColor.toString();
@@ -1083,23 +1111,22 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
 
     for (let lineData of lineObjects) {
         if (lineData.text === '' && !lineData.isBulletStart && !lineData.isPowerupHeader) continue;
-        let lineYDraw = currentBoxY + lineData.y; // Use animated Y for drawing position
-        let lineBaseXDraw = currentBoxX + scaledPadding + lineData.bulletIndentOffset; // Use fixed X for drawing position
+        let lineYDraw = currentBoxY + lineData.y;
+        let lineBaseXDraw = currentBoxX + scaledPadding + lineData.bulletIndentOffset;
         let lineText = lineData.text;
         let textDrawX;
         let textDrawY = lineYDraw + (lineHeight - scaledTextSize) * 0.3;
 
         if (lineData.isBulletStart || lineData.isPowerupHeader) {
             let iconX = lineBaseXDraw;
-            let iconY = lineYDraw; // Use animated Y
+            let iconY = lineYDraw;
             textDrawX = iconX + iconAreaWidth;
             let iconDrawn = false;
 
-            // Icon drawing logic (unchanged, uses global functions now)
             if (mode === 'SURVIVAL') {
                 if (lineData.contains.includes('Goal')) { drawTrophyIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Start')) { drawCoinIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
-                else if (lineData.contains.includes('Bet')) { drawSliderIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
+                else if (lineData.contains.includes('Bet')) { drawSliderIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;} // Icon tied to 'Bet:' line
                 else if (lineData.contains.includes('Reward')) { drawUpArrowIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Scoring')) { drawScoringIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Danger')) { drawClockIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
@@ -1110,7 +1137,7 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
                 else if (lineData.contains.includes('2x Multiplier')) { draw2xMultiplierIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Extra Ball')) { drawExtraBallPlusIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
             } else if (mode === 'HIGHSCORE') {
-                if (lineData.contains.includes('Start')) { drawCoinIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
+                 if (lineData.contains.includes('Start')) { drawCoinIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Bet')) { drawLockIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Goal')) { drawTrophyIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('End')) { drawBallIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
@@ -1118,50 +1145,53 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
             }
 
             if (!iconDrawn) {
-                textDrawX = lineBaseXDraw; // No icon drawn, text starts at base X
+                textDrawX = lineBaseXDraw;
             }
         } else if (lineData.indent) {
-            textDrawX = lineBaseXDraw + iconAreaWidth; // Wrapped line alignment
+            textDrawX = lineBaseXDraw + iconAreaWidth;
         } else {
-            textDrawX = currentBoxX + scaledPadding; // Normal line
+            textDrawX = currentBoxX + scaledPadding;
         }
 
         // --- Draw Text ---
         fill(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha);
-        if (mode === 'SURVIVAL' && lineData.contains.includes('bet slider')) {
-            let keyword = '"bet slider"';
+        // <<< Updated highlighting logic >>>
+        if (mode === 'SURVIVAL' && lineText.includes('"bet amount"')) { // Check for the core phrase
+            let keyword = '"bet amount"'; // Highlight only this part
             let startIndex = lineText.indexOf(keyword);
             if (startIndex !== -1) {
                 let prefix = lineText.substring(0, startIndex);
                 let highlighted = lineText.substring(startIndex, startIndex + keyword.length);
-                let suffix = lineText.substring(startIndex + keyword.length);
+                let suffix = lineText.substring(startIndex + keyword.length); // Includes " slider..." part
                 let prefixWidth = textWidth(prefix);
                 let highlightedWidth = textWidth(highlighted);
                 text(prefix, textDrawX, textDrawY);
                 fill(betSliderHighlightColor);
-                text(highlighted, textDrawX + prefixWidth, textDrawY);
+                text(highlighted, textDrawX + prefixWidth, textDrawY); // Draw highlighted keyword
                 fill(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha);
-                text(suffix, textDrawX + prefixWidth + highlightedWidth, textDrawY);
-            } else { text(lineText, textDrawX, textDrawY); }
-        } else { text(lineText, textDrawX, textDrawY); }
+                text(suffix, textDrawX + prefixWidth + highlightedWidth, textDrawY); // Draw the rest normally
+            } else {
+                 text(lineText, textDrawX, textDrawY);
+            }
+        } else {
+            text(lineText, textDrawX, textDrawY);
+        }
     }
 
-    // --- Draw Corner Animations (Unchanged) ---
+    // --- Draw Corner Animations ---
      let cornerAnimSize = scaledIconSize * 1.8;
      let cornerAnimX = currentBoxX + scaledBoxWidth - scaledPadding - cornerAnimSize;
-     let cornerAnimY = currentBoxY + scaledPadding; // Use animated Y
+     let cornerAnimY = currentBoxY + scaledPadding;
      let cornerAnimH = scaledIconSize * 1.5;
     if (mode === 'HIGHSCORE') { drawBallCountAnimation(cornerAnimX + cornerAnimSize, cornerAnimY, cornerAnimSize, finalTextAlpha); }
     else if (mode === 'SURVIVAL') { drawSurvivalCornerAnimation(cornerAnimX, cornerAnimY, cornerAnimSize, cornerAnimH * 1.5, finalTextAlpha); }
 
-    drawingContext.shadowBlur = 0; // Reset shadow
-    smooth(); // Restore default smoothing
-    pop(); // Restore drawing settings (noSmooth)
-    pop(); // Restore transform/style state for the whole function
+    drawingContext.shadowBlur = 0;
+    smooth();
+    pop();
+    pop();
 }
 
-
-// ... (Other drawing functions: drawPegs, drawBalls, etc. - unchanged) ...
 function drawPegs() { push(); const scaledPegRadius = basePegRadius * currentScale; const glowSize = scaledPegRadius * basePegGlowSizeIncrease; const scaledBaseShadowBlur = basePegShadowBlur * currentScale; noStroke(); for (let peg of pegs) { if (!Composite.get(world, peg.id, 'body')) continue; let currentRadius = scaledPegRadius; let currentShadowColor = 'rgba(180, 220, 255, 0.5)'; let currentShadowBlur = scaledBaseShadowBlur; let baseColor = color(255, 255, 255, 230); if (peg.plugin?.glowTimer > 0) { let glowProgress = map(peg.plugin.glowTimer, pegGlowDuration, 0, 1, 0); currentRadius = lerp(scaledPegRadius, glowSize, glowProgress); fill(255, 255, 255, lerp(230, 255, glowProgress)); currentShadowBlur = lerp(scaledBaseShadowBlur, max(10, 20 * currentScale), glowProgress); currentShadowColor = `rgba(255, 255, 255, ${lerp(0.5, 0.9, glowProgress)})`; peg.plugin.glowTimer--; } else { fill(baseColor); } drawingContext.shadowBlur = currentShadowBlur; drawingContext.shadowColor = currentShadowColor; ellipse(peg.position.x, peg.position.y, currentRadius * 2); drawingContext.shadowBlur = 0; } drawingContext.shadowBlur = 0; pop(); }
 function drawBalls() { push(); const scaledBallRadius = currentBallRadius * currentScale; for (let i = balls.length - 1; i >= 0; i--) { let ball = balls[i]; if (!Composite.get(world, ball.id, 'body')) { console.warn(`Ball body ${ball.id} not found in world, removing from drawing array.`); balls.splice(i, 1); continue; } if (showTrails && ball.plugin?.path?.length > 1) { push(); noFill(); let ballColor = color(neonBlue[0], neonBlue[1], neonBlue[2]); let transparentColor = color(neonBlue[0], neonBlue[1], neonBlue[2], 0); for (let j = 1; j < ball.plugin.path.length; j++) { let segmentRatio = (j - 1) / (ball.plugin.path.length - 2 || 1); let currentAlpha = lerp(trailEndAlpha, trailStartAlpha, segmentRatio); let currentWeight = lerp(trailEndWeightFactor, trailStartWeightFactor, segmentRatio); currentWeight *= scaledBallRadius * 2; currentWeight = max(1, currentWeight); stroke(ballColor.levels[0], ballColor.levels[1], ballColor.levels[2], currentAlpha); strokeWeight(currentWeight); strokeCap(ROUND); line(ball.plugin.path[j - 1].x, ball.plugin.path[j - 1].y, ball.plugin.path[j].x, ball.plugin.path[j].y); } pop(); } let ballDrawColor = neonBlue; let glowColor = 'rgba(100, 220, 255, 0.7)'; push(); translate(ball.position.x, ball.position.y); rotate(ball.angle); fill(ballDrawColor[0], ballDrawColor[1], ballDrawColor[2]); noStroke(); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = glowColor; ellipse(0, 0, scaledBallRadius * 2); drawingContext.shadowBlur = 0; pop(); if (ball.position.y > scaledCanvasHeight + scaledBallRadius * 5 || ball.position.x < -scaledBallRadius * 5 || ball.position.x > gameAreaWidth + scaledBallRadius * 5) { if (DEBUG_MODE) console.log(`Removing off-screen ball ${ball.id}`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } balls.splice(i, 1); } } pop(); }
 function drawFunnels() { push(); if (!slotStartY || !dividers || dividers.length < numSlots + 1) { pop(); return; } const funnelTopActualY = slotStartY - 5 * currentScale; const scaledSlotHeight = baseSlotHeight * currentScale; stroke(funnelColor[0], funnelColor[1], funnelColor[2], funnelColor[3]); strokeWeight(max(1, 1.5 * currentScale)); for (let i = 1; i < dividers.length - 1; i++) { if (!dividers[i] || !dividers[i].position) continue; line(dividers[i].position.x, funnelTopActualY, dividers[i].position.x, slotStartY + scaledSlotHeight); } pop(); }
@@ -1181,22 +1211,15 @@ function drawMarker() { if (gameState !== 'PLAYING' || markerX === undefined || 
 
 
 // ============================ Body Creation Functions ============================
-// ... (createPegs, createSlotsAndDividers, createBoundaries, createPhysicsBall - no changes needed) ...
 function createPegs() { pegs.forEach(peg => { if (Composite.get(world, peg.id, 'body')) { World.remove(world, peg); } }); pegs = []; lastRowPegPositionsX = []; topRowOuterPegsX = []; lastPegRowY = 0; let scaledPegRadius = basePegRadius * currentScale; let scaledPegSpacing = basePegSpacing * currentScale; let scaledStartY = baseStartYPegs * currentScale; const options = { isStatic: true, restitution: pegRestitution, friction: pegFriction, label: 'peg', plugin: { glowTimer: 0 } }; for (let row = 0; row < pegRowsTotal; row++) { let pegsInRow = row + 3; let y = scaledStartY + row * scaledPegSpacing * 0.95; let totalWidth = (pegsInRow - 1) * scaledPegSpacing; let startX = (gameAreaWidth - totalWidth) / 2; if (y > lastPegRowY) { lastPegRowY = y; } let isLastRow = (row === pegRowsTotal - 1); let isFirstRow = (row === 0); for (let col = 0; col < pegsInRow; col++) { let x = startX + col * scaledPegSpacing; let peg = Bodies.circle(x, y, scaledPegRadius, options); World.add(world, peg); pegs.push(peg); if (isLastRow) { lastRowPegPositionsX.push(x); } if (isFirstRow) { if (col === 0) topRowOuterPegsX[0] = x; if (col === pegsInRow - 1) topRowOuterPegsX[1] = x; } } } if (topRowOuterPegsX.length === 2) { markerMinX = topRowOuterPegsX[0]; markerMaxX = topRowOuterPegsX[1]; if (markerX === undefined || markerX < markerMinX || markerX > markerMaxX) { markerX = markerMinX; } markerY = scaledStartY - 30 * currentScale; markerSpeed = baseMarkerSpeed * currentScale; markerSize = baseMarkerSize * currentScale; } else { console.error("Could not find outermost top pegs for marker! Using fallback bounds."); markerMinX = gameAreaWidth * 0.1; markerMaxX = gameAreaWidth * 0.9; markerX = markerMinX; markerY = scaledStartY - 30 * currentScale; } if (lastRowPegPositionsX.length !== numSlots + 1) { console.warn(`Peg position warning: Expected ${numSlots + 1} bottom peg X positions for dividers, found ${lastRowPegPositionsX?.length}. Dividers might be slightly misaligned.`); } }
 function createSlotsAndDividers() { dividers.forEach(div => { if (Composite.get(world, div.id, 'body')) { World.remove(world, div); } }); slotSensors.forEach(sen => { if (Composite.get(world, sen.id, 'body')) { World.remove(world, sen); } }); dividers = []; slotSensors = []; let scaledSlotHeight = baseSlotHeight * currentScale; let scaledDividerWidth = max(1, baseDividerWidth * currentScale); if (typeof slotStartY === 'undefined') { console.error("slotStartY undefined in createSlotsAndDividers. Cannot create slots."); return; } let dividerXPositions = []; if (lastRowPegPositionsX && lastRowPegPositionsX.length === numSlots + 1) { dividerXPositions = lastRowPegPositionsX; } else { console.error(`Incorrect number of peg positions for dividers: Expected ${numSlots + 1}, found ${lastRowPegPositionsX?.length}. Using approximated positions.`); const approxSlotWidth = gameAreaWidth * 0.8 / numSlots; const startDivX = gameAreaWidth * 0.1; for (let i = 0; i <= numSlots; i++) { dividerXPositions.push(startDivX + i * approxSlotWidth); } } const sensorOptions = { isStatic: true, isSensor: true, label: '' }; const dividerOptions = { isStatic: true, restitution: dividerRestitution, friction: dividerFriction, label: 'divider' }; const dividerHeight = scaledSlotHeight + 5 * currentScale; const dividerY = slotStartY + scaledSlotHeight / 2; let currentDividers = []; for (let i = 0; i < dividerXPositions.length; i++) { let dividerX = dividerXPositions[i]; let divider = Bodies.rectangle(dividerX, dividerY, scaledDividerWidth, dividerHeight, dividerOptions); currentDividers.push(divider); } dividers = currentDividers; World.add(world, dividers); const sensorY = slotStartY + scaledSlotHeight / 2; for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1]) { console.error(`Missing divider for slot sensor ${i}`); continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let sensorSlotWidth = dividerRightX - dividerLeftX; if (sensorSlotWidth <= 0) { sensorSlotWidth = 1; } let currentSensorOptions = { ...sensorOptions, label: `slot_${i}` }; let sensor = Bodies.rectangle(slotCenterX, sensorY, sensorSlotWidth, scaledSlotHeight, currentSensorOptions); World.add(world, sensor); slotSensors.push(sensor); } }
 function createBoundaries() { boundaries.forEach(body => { if (Composite.get(world, body.id, 'body')) { World.remove(world, body); } }); boundaries = []; const wallOptions = { isStatic: true, isSensor: true, label: 'wall' }; const groundOptions = { isStatic: true, restitution: groundRestitution, friction: groundFriction, label: 'ground' }; const wallThickness = max(5, 20 * currentScale); if (typeof slotStartY === 'undefined') { console.error("Cannot create boundaries: slotStartY is undefined."); return; } let scaledSlotHeight = baseSlotHeight * currentScale; const groundY = slotStartY + scaledSlotHeight + wallThickness / 2 - max(1, 1 * currentScale); let leftmostX = wallThickness / 2; let rightmostX = gameAreaWidth - wallThickness / 2; if (dividers.length > 0 && dividers[0].position && dividers[dividers.length - 1].position) { const firstDividerX = dividers[0].position.x; const lastDividerX = dividers[dividers.length - 1].position.x; const scaledDividerWidth = max(1, baseDividerWidth * currentScale); const wallPadding = (basePegSpacing * 1.0) * currentScale; leftmostX = Math.max(wallThickness / 2, firstDividerX - wallPadding - scaledDividerWidth / 2); rightmostX = Math.min(gameAreaWidth - wallThickness / 2, lastDividerX + wallPadding + scaledDividerWidth / 2); } else { console.warn("No dividers found for precise boundary calculation. Using default bounds."); } let leftWall = Bodies.rectangle(leftmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let rightWall = Bodies.rectangle(rightmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let groundWidth = rightmostX - leftmostX + wallThickness; let groundCenterX = (leftmostX + rightmostX) / 2; let ground = Bodies.rectangle(groundCenterX, groundY, groundWidth, wallThickness, groundOptions); World.add(world, [leftWall, rightWall, ground]); boundaries.push(leftWall, rightWall, ground); }
 function createPhysicsBall(x, y) { const scaledBallRadius = currentBallRadius * currentScale; const ballColor = neonBlue; const label = 'ball_regular'; const options = { restitution: ballRestitution, friction: 0.05, frictionAir: ballFrictionAir, density: ballDensity, label: label, isStatic: false, plugin: { type: 'regular', hitWall: false, path: [] }, render: { fillStyle: `rgb(${ballColor[0]}, ${ballColor[1]}, ${ballColor[2]})` } }; let ball = Bodies.circle(x, y, scaledBallRadius, options); Body.setVelocity(ball, { x: Common.random(-0.1, 0.1) * currentScale, y: 0 }); World.add(world, ball); balls.push(ball); }
 
 // ============================ Collision & Scoring ============================
-// ... (handleCollisions - no changes needed) ...
 function handleCollisions(event) { let pairs = event.pairs; for (let i = 0; i < pairs.length; i++) { let pair = pairs[i]; if (!pair || !pair.isActive || !pair.collision) continue; let bodyA = pair.bodyA; let bodyB = pair.bodyB; let ball = null, sensor = null, ground = null, wall = null, peg = null, divider = null; if (bodyA.label === 'ball_regular') ball = bodyA; else if (bodyB.label === 'ball_regular') ball = bodyB; if (bodyA.label.startsWith('slot_')) sensor = bodyA; else if (bodyB.label.startsWith('slot_')) sensor = bodyB; if (bodyA.label === 'ground') ground = bodyA; else if (bodyB.label === 'ground') ground = bodyB; if (bodyA.label === 'wall') wall = bodyA; else if (bodyB.label === 'wall') wall = bodyB; if (bodyA.label === 'peg') peg = bodyA; else if (bodyB.label === 'peg') peg = bodyB; if (bodyA.label === 'divider') divider = bodyA; else if (bodyB.label === 'divider') divider = bodyB; if (ball && sensor) { if (!Composite.get(world, ball.id, 'body')) continue; let hitSlotIndex = parseInt(sensor.label.split('_')[1]); if (hitSlotIndex >= 0 && hitSlotIndex < numSlots) { let sensorBody = slotSensors[hitSlotIndex]; if (!sensorBody) { console.warn(`Collision: Could not find sensor body for index ${hitSlotIndex}`); continue; } let slotCenterX = sensorBody.position.x; let slotCenterY = sensorBody.position.y; let slotWidth = sensorBody.bounds.max.x - sensorBody.bounds.min.x; slotHitCounts[hitSlotIndex]++; histogramBarPulseState[hitSlotIndex] = histogramPulseDuration; slotBounceState[hitSlotIndex] = bounceDuration; slotGlowState[hitSlotIndex] = slotGlowDuration; createParticleBurst(slotCenterX, slotCenterY); createRippleEffect(slotCenterX, slotCenterY, slotWidth); createBackgroundRipple(slotCenterX, slotCenterY); let baseMultiplierValue = slotMultipliers[hitSlotIndex]; let finalMultiplier = baseMultiplierValue; let amountWon = 0; if (currentGameMode === 'SURVIVAL') { if (isDoubleMultiplierActive) finalMultiplier *= 2; amountWon = betAmount * finalMultiplier; } else if (currentGameMode === 'HIGHSCORE') { finalMultiplier = baseMultiplierValue; amountWon = finalMultiplier * 10; } let amountToAdd = floor(amountWon); if (currentGameMode === 'SURVIVAL') { sessionScore += amountToAdd; score += amountToAdd; } else if (currentGameMode === 'HIGHSCORE') { highScorePoints += amountToAdd; } recentHits.push({ value: finalMultiplier, timestamp: frameCount }); if (recentHits.length > maxMultiplierHistory) { recentHits.shift(); } if (blopSound && blopSound.isLoaded()) { blopSound.play(); } if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else { console.warn(`Invalid slot index ${hitSlotIndex} from sensor ${sensor.label}. Removing ball.`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } } else if (ball && peg) { if (peg.plugin) { peg.plugin.glowTimer = pegGlowDuration; } if (pair.collision.normal) { let forceDirection = Matter.Vector.sub(ball.position, peg.position); forceDirection = Matter.Vector.normalise(forceDirection); forceDirection = Matter.Vector.mult(forceDirection, horizontalKickStrength); forceDirection.y *= 0.1; Body.applyForce(ball, ball.position, forceDirection); } createBackgroundRipple(peg.position.x, peg.position.y); } else if (ball && wall) { if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else if (ball && (ground || divider)) { /* Physics handles bounce */ } } }
 
 // ============================ Event Handlers & Other Logic ============================
-// ... (showLeaderboardForm, positionLeaderboardForm, hideLeaderboardForm, handleScoreSubmittedSuccessfully - unchanged) ...
-// ... (fetchLeaderboardData, fetchAllLeaderboards - logic updated to handle context but signature unchanged externally) ...
-// ... (firstInteraction, startAudioPlayback, mousePressed, mouseDragged, mouseReleased, keyPressed, checkSliderInteraction, updateSliderValue - unchanged) ...
-// ... (activateDoubleDrop, activateDoubleMultiplier, handleDrop, handleSurvivalDecay, updateGoldLossVisuals, drawGoldLossVisuals, handlePowerupTimersAndVisuals - unchanged) ...
-// ... (returnToLaunchMenuCleanup, resetGame - unchanged) ...
 function showLeaderboardForm(finalScore, mode) {
     const form = document.getElementById('leaderboard-form');
     const scoreInput = document.getElementById('score');
@@ -1214,10 +1237,9 @@ function showLeaderboardForm(finalScore, mode) {
         setTimeout(() => { nameInput.focus(); }, 50);
     } else {
         console.error("Could not find all leaderboard form elements! Skipping form display.");
-        // Use end-game specific error state
         leaderboardError = "Leaderboard form unavailable.";
         gameOverState = 'SHOWING_LEADERBOARD';
-        fetchLeaderboardData('endgame', currentGameMode); // Fetch for endgame display
+        fetchLeaderboardData('endgame', currentGameMode);
     }
 }
 
@@ -1258,10 +1280,9 @@ function handleScoreSubmittedSuccessfully() {
     }
     hideLeaderboardForm();
     gameOverState = 'SHOWING_LEADERBOARD';
-    fetchLeaderboardData('endgame', currentGameMode); // Fetch for endgame display after submit
+    fetchLeaderboardData('endgame', currentGameMode);
 }
 
-// Fetches data for EITHER the hover leaderboards OR the end-game screen
 async function fetchLeaderboardData(context, mode) {
     if (!mode) {
         console.error("fetchLeaderboardData called without a mode!");
@@ -1278,7 +1299,7 @@ async function fetchLeaderboardData(context, mode) {
          return;
     }
 
-    let isLoading, dataStore, errorStore;
+    let isLoading;
     if (context === 'hover') {
         if (mode === 'survival') { isLoading = survivalLeaderboardLoading; }
         else { isLoading = highScoreLeaderboardLoading; }
@@ -1286,10 +1307,6 @@ async function fetchLeaderboardData(context, mode) {
         isLoading = leaderboardLoading;
     }
 
-    // Note: We allow fetches even if currently loading, subsequent calls will just update the data when done.
-    // if (isLoading) return;
-
-    // Set loading state
     if (context === 'hover') {
         if (mode === 'survival') { survivalLeaderboardLoading = true; survivalLeaderboardData = null; survivalLeaderboardError = null; }
         else { highScoreLeaderboardLoading = true; highScoreLeaderboardData = null; highScoreLeaderboardError = null; }
@@ -1301,12 +1318,11 @@ async function fetchLeaderboardData(context, mode) {
     console.log(`Fetching ${context} leaderboard data from ${tableName}...`);
 
     try {
-        // Fetch up to 10 entries regardless of context, as hover needs 10 now too.
         const { data, error } = await window.supabaseClient
             .from(tableName)
             .select('player_name, score')
             .order('score', { ascending: false })
-            .limit(leaderboardMaxEntries); // Use the end-game limit (10)
+            .limit(leaderboardMaxEntries);
 
         if (error) {
             console.error(`Error fetching ${context} leaderboard (${mode}):`, error);
@@ -1335,7 +1351,6 @@ async function fetchLeaderboardData(context, mode) {
              leaderboardError = errorMsg;
         }
     } finally {
-        // Clear loading state
         if (context === 'hover') {
             if (mode === 'survival') survivalLeaderboardLoading = false;
             else highScoreLeaderboardLoading = false;
@@ -1345,7 +1360,6 @@ async function fetchLeaderboardData(context, mode) {
     }
 }
 
-// Wrapper to fetch both leaderboards for the hover panels
 function fetchAllLeaderboards() {
     console.log("Fetching both leaderboards for hover display...");
     fetchLeaderboardData('hover', 'survival');
@@ -1407,14 +1421,12 @@ function mousePressed() {
         const isFormVisible = formElement && formElement.style.display !== 'none';
 
         if (isFormVisible) {
-            const rect = formElement.getBoundingClientRect();
              let formRect = formElement.getBoundingClientRect();
-             // Convert mouse coords relative to canvas if needed, but form is HTML
              let mouseWindowX = mouseX + (windowWidth - scaledCanvasWidth) / 2;
              let mouseWindowY = mouseY + (windowHeight - scaledCanvasHeight) / 2;
              if (mouseWindowX >= formRect.left && mouseWindowX <= formRect.right &&
                  mouseWindowY >= formRect.top && mouseWindowY <= formRect.bottom) {
-                return; // Click was inside the form, let HTML handle it
+                return;
             }
         }
 
@@ -1425,7 +1437,6 @@ function mousePressed() {
             let mouseCanvasX = mouseX;
             let mouseCanvasY = mouseY;
 
-            // Check clicks only within the game area part of the canvas for these buttons
             if (mouseCanvasX >= 0 && mouseCanvasX <= gameAreaWidth && mouseCanvasY >= 0 && mouseCanvasY <= scaledCanvasHeight) {
                 if (mouseCanvasX > btnX && mouseCanvasX < btnX + btnW && mouseCanvasY > restartBtnY && mouseCanvasY < restartBtnY + btnH) {
                     hideLeaderboardForm(); startTransition('PLAYING', prepareGameForMode); return;
@@ -1435,7 +1446,6 @@ function mousePressed() {
                 }
             }
         }
-         // If form was visible but click was outside it, do nothing else either
         if (isFormVisible) return;
 
     } else if (gameState === 'PLAYING') {
@@ -1471,7 +1481,6 @@ function mousePressed() {
             }
         }
     }
-     // Clicks in LAUNCH_MENU are handled by the HTML buttons
 }
 
 function mouseDragged() {
@@ -1499,7 +1508,7 @@ function keyPressed() {
             let canDrop = (currentGameMode === 'SURVIVAL' && score >= betAmount) || (currentGameMode === 'HIGHSCORE' && ballsRemaining > 0);
             if (canDrop) {
                 handleDrop();
-                return false; // Prevent default space bar scroll
+                return false;
             }
         }
     }
@@ -1518,7 +1527,6 @@ function keyPressed() {
              return false;
          }
     }
-    // Allow default browser behavior for other keys if not handled
 }
 
 function checkSliderInteraction(slider, eventType) {
@@ -1569,7 +1577,7 @@ function checkSliderInteraction(slider, eventType) {
                 newValue = constrain(newValue, slider.minVal, slider.maxVal);
                 updateSliderValue(slider, newValue);
              } else {
-                 slider.dragging = false; // Stop dragging if disabled mid-drag
+                 slider.dragging = false;
              }
              interactionOccurred = true;
          }
@@ -1587,40 +1595,59 @@ function updateSliderValue(slider, newValue) { if (slider === speedSlider) { sli
 
 function activateDoubleDrop() { if (currentGameMode !== 'SURVIVAL' || isDoubleDropActive) return; isDoubleDropActive = true; doubleDropTimer = doubleDropDuration; doubleDropMessage = "DOUBLE DROP!"; doubleDropMessageTimer = powerupMessageDuration; if (bonusSound?.isLoaded()) { bonusSound.play(); } }
 function activateDoubleMultiplier() { if (currentGameMode !== 'SURVIVAL' || isDoubleMultiplierActive) return; isDoubleMultiplierActive = true; doubleMultiplierTimer = doubleMultiplierDuration; doubleMultiplierMessage = "2x MULTIPLIER!"; doubleMultiplierMessageTimer = powerupMessageDuration; if (bonusSound?.isLoaded()) { bonusSound.play(); } }
+
 function handleDrop() {
     if (gameState !== 'PLAYING' || transitionState !== 'NONE') return;
+
     if (currentGameMode === 'SURVIVAL') {
         let cost = betAmount;
         if (score >= cost) {
             score -= cost;
+
             let startX = markerX + random(-1 * currentScale, 1 * currentScale);
             let startY = markerY;
+
             createPhysicsBall(startX, startY);
-            let isBonusBallTriggered = false;
-            if (random() < bonusBallChance) {
-                isBonusBallTriggered = true;
-                bonusBallMessage = "EXTRA BALL!";
-                bonusBallTimer = bonusBallDuration;
+
+            if (isNextDropBonus) {
+                isNextDropBonus = false;
+                 setTimeout(() => {
+                    if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
+                    let bonusStartX = startX + random(-2 * currentScale, 2 * currentScale);
+                    let bonusStartY = startY;
+                    createPhysicsBall(bonusStartX, bonusStartY);
+                    if (DEBUG_MODE) console.log("Bonus Drop triggered!");
+                }, dropDelay / 3);
+            }
+            else if (isDoubleDropActive) {
                 setTimeout(() => {
                     if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
-                    let bonusStartX = markerX + random(-1 * currentScale, 1 * currentScale);
-                    let bonusStartY = markerY;
-                    createPhysicsBall(bonusStartX, bonusStartY);
-                }, dropDelay / 2);
+                    let extraStartX = startX + random(-1 * currentScale, 1 * currentScale);
+                    let extraStartY = startY;
+                    createPhysicsBall(extraStartX, extraStartY);
+                    if (DEBUG_MODE) console.log("Double Drop powerup dropped second ball.");
+                }, dropDelay / 3);
             }
+
             let betRange = maxBetAmount - minBetAmount;
             let betRatio = (betRange > 0) ? constrain((betAmount - minBetAmount) / betRange, 0, 1) : 0;
             let oddsMultiplier = 1 + powerupBetScalingFactor * betRatio;
-            if (!isDoubleDropActive && random() < doubleDropChance * oddsMultiplier) activateDoubleDrop();
-            if (!isDoubleMultiplierActive && random() < doubleMultiplierChance * oddsMultiplier) activateDoubleMultiplier();
-            if (isDoubleDropActive && !isBonusBallTriggered) {
-                setTimeout(() => {
-                    if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
-                    let extraStartX = markerX + random(-1 * currentScale, 1 * currentScale);
-                    let extraStartY = markerY;
-                    createPhysicsBall(extraStartX, extraStartY);
-                }, dropDelay / 3);
+
+            if (!isNextDropBonus && random() < bonusBallChance) {
+                isNextDropBonus = true;
+                bonusBallMessage = "NEXT DROP DOUBLED!";
+                bonusBallTimer = bonusBallDuration;
+                 if (DEBUG_MODE) console.log("Next Drop Bonus Activated!");
+                if (bonusSound && bonusSound.isLoaded()) { bonusSound.play(); }
             }
+
+            if (!isDoubleDropActive && random() < doubleDropChance * oddsMultiplier) {
+                activateDoubleDrop();
+            }
+            if (!isDoubleMultiplierActive && random() < doubleMultiplierChance * oddsMultiplier) {
+                activateDoubleMultiplier();
+            }
+
         } else {
             if (DEBUG_MODE) console.log("Drop prevented: Insufficient gold (final check).");
         }
@@ -1637,6 +1664,7 @@ function handleDrop() {
         }
     }
 }
+
 
 function handleSurvivalDecay() {
     if (gameState !== 'PLAYING' || currentGameMode !== 'SURVIVAL') return;
@@ -1666,7 +1694,6 @@ function handleSurvivalDecay() {
             isGameOverConditionMet = true;
             isGameOverFromDecay = true;
         }
-         // Check for immediate game over if score drops below threshold after decay
          if (score < minBetAmount && balls.length === 0) {
              isGameOverConditionMet = true;
          } else if (score <= 0 && balls.length === 0) {
@@ -1733,7 +1760,93 @@ function drawGoldLossVisuals() {
     }
     pop();
 }
-function handlePowerupTimersAndVisuals() { push(); let time = millis() / 1000.0; noStroke(); let scaledBonusTextSize = max(20, 40 * currentScale); let scaledPowerupTextSize = scaledBonusTextSize * 0.9; let bonusY = scaledCanvasHeight / 2 - 100 * currentScale; let powerupOffsetY = scaledBonusTextSize * 1.2; let scaledShadowBlur = max(5, 15 * currentScale); textFont(titleFont); textAlign(CENTER, CENTER); if (bonusBallTimer > 0) { bonusBallTimer--; let alpha = map(bonusBallTimer, 0, bonusBallDuration, 0, 255); fill(bonusColor[0], bonusColor[1], bonusColor[2], alpha); textSize(scaledBonusTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${bonusColor[0]},${bonusColor[1]},${bonusColor[2]},${alpha / 255 * 0.7})`; text(bonusBallMessage, gameAreaWidth / 2, bonusY); drawingContext.shadowBlur = 0; } else { bonusBallMessage = ''; } let ddY = bonusY + powerupOffsetY; if (doubleDropMessageTimer > 0) { doubleDropMessageTimer--; let alpha = map(doubleDropMessageTimer, 0, powerupMessageDuration, 0, 255); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha); textSize(scaledPowerupTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${neonBlue[0]},${neonBlue[1]},${neonBlue[2]},${alpha / 255 * 0.7})`; text(doubleDropMessage, gameAreaWidth / 2, ddY); drawingContext.shadowBlur = 0; } else { doubleDropMessage = ''; } let dmY = bonusY + powerupOffsetY * (doubleDropMessageTimer > 0 ? 2 : 1); if (doubleMultiplierMessageTimer > 0) { doubleMultiplierMessageTimer--; let alpha = map(doubleMultiplierMessageTimer, 0, powerupMessageDuration, 0, 255); fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha); textSize(scaledPowerupTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${neonYellow[0]},${neonYellow[1]},${neonYellow[2]},${alpha / 255 * 0.7})`; text(doubleMultiplierMessage, gameAreaWidth / 2, dmY); drawingContext.shadowBlur = 0; } else { doubleMultiplierMessage = ''; } if (isDoubleDropActive && doubleDropTimer > 0) doubleDropTimer--; if (isDoubleMultiplierActive && doubleMultiplierTimer > 0) doubleMultiplierTimer--; if (isDoubleDropActive && doubleDropTimer <= 0) { isDoubleDropActive = false; } if (isDoubleMultiplierActive && doubleMultiplierTimer <= 0) { isDoubleMultiplierActive = false; } let scaledThicknessMin = max(1, 3 * currentScale); let scaledThicknessMax = max(3, 8 * currentScale); let scaledInset = 10 * currentScale; let scaledRectBorderRadius = max(2, 5 * currentScale); if (isDoubleDropActive) { let pulse = (sin(time * 8) + 1) / 2; let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax); let borderCol = lerpColor(color(neonBlue[0], neonBlue[1], neonBlue[2]), color(trueRed[0], trueRed[1], trueRed[2]), pulse); stroke(borderCol); strokeWeight(thickness); noFill(); rect(thickness / 2, thickness / 2, gameAreaWidth - thickness, scaledCanvasHeight - thickness, scaledRectBorderRadius); } if (isDoubleMultiplierActive) { let inset = isDoubleDropActive ? scaledInset : 0; let pulse = (sin(time * 6 + PI / 2) + 1) / 2; let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax); stroke(neonYellow[0], neonYellow[1], neonYellow[2], map(pulse, 0, 1, 150, 255)); strokeWeight(thickness); noFill(); rect(thickness / 2 + inset, thickness / 2 + inset, gameAreaWidth - thickness - inset * 2, scaledCanvasHeight - thickness - inset * 2, scaledRectBorderRadius); } noStroke(); pop(); }
+
+function handlePowerupTimersAndVisuals() {
+    push();
+    let time = millis() / 1000.0;
+    noStroke();
+    let scaledBonusTextSize = max(20, 40 * currentScale);
+    let scaledPowerupTextSize = scaledBonusTextSize * 0.9;
+    let bonusY = scaledCanvasHeight / 2 - 100 * currentScale;
+    let powerupOffsetY = scaledBonusTextSize * 1.2;
+    let scaledShadowBlur = max(5, 15 * currentScale);
+    textFont(titleFont);
+    textAlign(CENTER, CENTER);
+
+    if (bonusBallTimer > 0) {
+        bonusBallTimer--;
+        let alpha = map(bonusBallTimer, 0, bonusBallDuration, 0, 255);
+        fill(bonusColor[0], bonusColor[1], bonusColor[2], alpha);
+        textSize(scaledBonusTextSize);
+        drawingContext.shadowBlur = scaledShadowBlur;
+        drawingContext.shadowColor = `rgba(${bonusColor[0]},${bonusColor[1]},${bonusColor[2]},${alpha / 255 * 0.7})`;
+        text(bonusBallMessage, gameAreaWidth / 2, bonusY);
+        drawingContext.shadowBlur = 0;
+         if (bonusBallTimer <= 0) {
+             bonusBallMessage = '';
+         }
+    }
+
+    let ddY = bonusY + powerupOffsetY;
+    if (doubleDropMessageTimer > 0) {
+        doubleDropMessageTimer--;
+        let alpha = map(doubleDropMessageTimer, 0, powerupMessageDuration, 0, 255);
+        fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha);
+        textSize(scaledPowerupTextSize);
+        drawingContext.shadowBlur = scaledShadowBlur;
+        drawingContext.shadowColor = `rgba(${neonBlue[0]},${neonBlue[1]},${neonBlue[2]},${alpha / 255 * 0.7})`;
+        text(doubleDropMessage, gameAreaWidth / 2, ddY);
+        drawingContext.shadowBlur = 0;
+        if (doubleDropMessageTimer <= 0) doubleDropMessage = '';
+    }
+
+    let dmY = bonusY + powerupOffsetY * ((doubleDropMessageTimer > 0 || bonusBallTimer > 0) ? 2 : 1);
+     if (doubleMultiplierMessageTimer > 0) {
+        doubleMultiplierMessageTimer--;
+        let alpha = map(doubleMultiplierMessageTimer, 0, powerupMessageDuration, 0, 255);
+        fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha);
+        textSize(scaledPowerupTextSize);
+        drawingContext.shadowBlur = scaledShadowBlur;
+        drawingContext.shadowColor = `rgba(${neonYellow[0]},${neonYellow[1]},${neonYellow[2]},${alpha / 255 * 0.7})`;
+        text(doubleMultiplierMessage, gameAreaWidth / 2, dmY);
+        drawingContext.shadowBlur = 0;
+        if (doubleMultiplierMessageTimer <= 0) doubleMultiplierMessage = '';
+    }
+
+    if (isDoubleDropActive && doubleDropTimer > 0) {
+        doubleDropTimer--;
+        if (doubleDropTimer <= 0) isDoubleDropActive = false;
+    }
+    if (isDoubleMultiplierActive && doubleMultiplierTimer > 0) {
+        doubleMultiplierTimer--;
+        if (doubleMultiplierTimer <= 0) isDoubleMultiplierActive = false;
+    }
+
+    let scaledThicknessMin = max(1, 3 * currentScale);
+    let scaledThicknessMax = max(3, 8 * currentScale);
+    let scaledInset = 10 * currentScale;
+    let scaledRectBorderRadius = max(2, 5 * currentScale);
+
+    if (isDoubleDropActive) {
+        let pulse = (sin(time * 8) + 1) / 2;
+        let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax);
+        let borderCol = lerpColor(color(neonBlue[0], neonBlue[1], neonBlue[2]), color(trueRed[0], trueRed[1], trueRed[2]), pulse);
+        stroke(borderCol); strokeWeight(thickness); noFill();
+        rect(thickness / 2, thickness / 2, gameAreaWidth - thickness, scaledCanvasHeight - thickness, scaledRectBorderRadius);
+    }
+
+    if (isDoubleMultiplierActive) {
+        let inset = isDoubleDropActive ? scaledInset : 0;
+        let pulse = (sin(time * 6 + PI / 2) + 1) / 2;
+        let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax);
+        stroke(neonYellow[0], neonYellow[1], neonYellow[2], map(pulse, 0, 1, 150, 255));
+        strokeWeight(thickness); noFill();
+        rect(thickness / 2 + inset, thickness / 2 + inset, gameAreaWidth - thickness - inset * 2, scaledCanvasHeight - thickness - inset * 2, scaledRectBorderRadius);
+    }
+
+    noStroke();
+    pop();
+}
 
 // --- Game State Management ---
 function returnToLaunchMenuCleanup() {
@@ -1747,23 +1860,23 @@ function returnToLaunchMenuCleanup() {
     isGameOverFromDecay = false;
     isDoubleDropActive = false; doubleDropTimer = 0; doubleDropMessageTimer = 0;
     isDoubleMultiplierActive = false; doubleMultiplierTimer = 0; doubleMultiplierMessageTimer = 0;
-    bonusBallTimer = 0; isGoldLossCountdownActive = false; goldLossMessageActive = false;
+    isNextDropBonus = false; bonusBallTimer = 0; bonusBallMessage = '';
+    isGoldLossCountdownActive = false; goldLossMessageActive = false;
     goldLostAmountForDisplay = 0; highScorePoints = 0; sessionScore = 0; score = 0;
     gameOverState = 'NONE';
-    leaderboardData = null; leaderboardLoading = false; leaderboardError = null; // Reset endgame leaderboard state
+    leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
     hideLeaderboardForm();
     if (speedSlider) speedSlider.enabled = true;
     if (betSlider) betSlider.enabled = true;
     if (ballSizeSlider) ballSizeSlider.enabled = true;
 
-    // Reset hover states and fetch data for launch menu
     isHoveringSurvival = false;
     isHoveringHighScore = false;
     survivalHoverAnimProgress = 0;
     highScoreHoverAnimProgress = 0;
     survivalLeaderboardAnimProgress = 0;
     highScoreLeaderboardAnimProgress = 0;
-    fetchAllLeaderboards(); // Fetch fresh data for hover display
+    fetchAllLeaderboards();
 }
 
 function resetGame() {
@@ -1774,7 +1887,8 @@ function resetGame() {
     for (let i = 0; i < numSlots; i++) { slotBounceState[i] = 0; slotHitCounts[i] = 0; histogramBarPulseState[i] = 0; slotGlowState[i] = 0; }
     pegs.forEach(peg => { if (peg.plugin) peg.plugin.glowTimer = 0; });
     isDoubleDropActive = false; doubleDropTimer = 0; isDoubleMultiplierActive = false; doubleMultiplierTimer = 0;
-    bonusBallMessage = ''; bonusBallTimer = 0; doubleDropMessage = ''; doubleDropMessageTimer = 0; doubleMultiplierMessage = ''; doubleMultiplierMessageTimer = 0;
+    isNextDropBonus = false; bonusBallMessage = ''; bonusBallTimer = 0;
+    doubleDropMessage = ''; doubleDropMessageTimer = 0; doubleMultiplierMessage = ''; doubleMultiplierMessageTimer = 0;
     highScoreEnded = false; isGameOverConditionMet = false; goldLossFlashActive = false;
     isGameOverFromDecay = false;
     isGoldLossCountdownActive = false; goldLossMessageActive = false; goldLostAmountForDisplay = 0;
@@ -1790,7 +1904,7 @@ function resetGame() {
         score = initialScoreSurvival;
         betAmount = minBetAmount;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = true; }
-        if (speedSlider) speedSlider.enabled = false; // SURVIVAL: Speed slider starts locked
+        if (speedSlider) speedSlider.enabled = false;
         ballsRemaining = Infinity;
         highScorePoints = 0;
         survivalStartTime = millis(); lastDecayTime = survivalStartTime;
@@ -1798,9 +1912,9 @@ function resetGame() {
     } else if (currentGameMode === 'HIGHSCORE') {
         score = highScoreStartingGold;
         ballsRemaining = highScoreBallsTotal;
-        betAmount = minBetAmount; // Still set, but slider disabled
+        betAmount = minBetAmount;
         if (betSlider) { betSlider.value = betAmount; betSlider.enabled = false; }
-        if (speedSlider) speedSlider.enabled = true; // HIGHSCORE: Speed slider starts enabled
+        if (speedSlider) speedSlider.enabled = true;
         highScorePoints = 0;
         survivalStartTime = 0; lastDecayTime = 0; currentDecayPercent = 0; nextDecayTime = Infinity;
     } else {
