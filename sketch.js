@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v77.64 (FIX: Remove asterisks from Extra Ball text, Increment Version)
+// P5.js + Matter.js Plinko Game: "DROP" - v07.67 (Fix: Define hover icon functions globally)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -70,7 +70,7 @@ const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lo
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V77.64"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V07.67"; // <<< VERSION number incremented >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
@@ -81,7 +81,7 @@ const backgroundRippleStartWeight = 1.5;
 const backgroundRippleEndWeight = 0.2;
 
 // Leaderboard Constants
-const leaderboardMaxEntries = 10;
+const leaderboardMaxEntries = 10; // For end-game display
 const baseLeaderboardTextSize = 14;
 const baseLeaderboardTitleSize = 28;
 const baseLeaderboardYOffset = 80;
@@ -98,15 +98,32 @@ const HOVER_BOX_OFFSET_X = 15;
 const HOVER_BOX_BG_COLOR = [35, 30, 55];
 const HOVER_BOX_BORDER_COLOR = [150, 150, 180];
 const HOVER_BOX_TEXT_COLOR = [220, 220, 240];
-const HOVER_ANIM_DURATION = 15;
+const HOVER_ANIM_DURATION = 15; // Shared duration for left desc & right leaderboard
 const NEON_GLOW_MAX_BLUR = 10;
 const NEON_GLOW_COLOR_ALPHA = 150;
 const SLIDE_OFFSCREEN_MARGIN = 20;
 const HOVER_ANIM_ICON_BASE_SIZE = 14;
 const HOVER_ANIM_SPACING = 8;
-const HOVER_SUB_BULLET_EXTRA_INDENT = 25; // Increased indent for power-up details
+const HOVER_SUB_BULLET_EXTRA_INDENT = 25;
 
-// --- Mode Descriptions (Updated) ---
+// --- Hover Leaderboard Constants ---
+const HOVER_LEADERBOARD_BASE_WIDTH = 250;
+const HOVER_LEADERBOARD_BASE_PADDING = 12;
+const HOVER_LEADERBOARD_TITLE_SIZE_BASE = 18;
+const HOVER_LEADERBOARD_TEXT_SIZE_BASE = 11; // Base size for leaderboard text
+const HOVER_LEADERBOARD_ENTRY_SPACING_BASE = 4;
+const HOVER_LEADERBOARD_MAX_ENTRIES = 10; // Display top 10
+const HOVER_LEADERBOARD_OFFSET_X = 15; // Spacing from the right of the menu box
+const HOVER_LEADERBOARD_BG_COLOR = [40, 35, 65];
+const HOVER_LEADERBOARD_BORDER_COLOR = [160, 140, 190];
+const HOVER_LEADERBOARD_TEXT_COLOR = [210, 210, 230];
+const HOVER_LEADERBOARD_GOLD_COLOR_LIGHT = [255, 235, 100];
+const HOVER_LEADERBOARD_GOLD_COLOR_MEDIUM = [255, 215, 0];
+const HOVER_LEADERBOARD_GOLD_COLOR_STRONG = [255, 190, 0];
+const HOVER_LEADERBOARD_SLIDE_DURATION = HOVER_ANIM_DURATION;
+
+
+// --- Mode Descriptions (Unchanged) ---
 const survivalDescriptionText = `Survival Mode:
 
 Goal: Earn points & climb the global leaderboard.
@@ -120,7 +137,7 @@ Race against time!
 Random Power Ups Chances :
  Double Drop: Drop 2 balls instead of 1 for ${doubleDropDuration / 60}s.
  2x Multiplier: All bin multipliers are doubled for ${doubleMultiplierDuration / 60}s.
- Extra Ball: Small chance on any drop to double the next ball.`; // Removed asterisks
+ Extra Ball: Small chance on any drop to double the next ball.`;
 
 const highScoreDescriptionText = `High Score Mode:
 
@@ -132,7 +149,6 @@ Purity: No power-ups or bonuses. Pure skill challenge!`;
 
 
 // Global Variables
-// ... (no changes to variable declarations needed) ...
 let currentScale = 1; let scaledCanvasWidth, scaledCanvasHeight; let gameAreaWidth, menuWidth, menuStartX; let lastPegRowY; let slotStartY; let score = 0; let sessionScore = 0; let highScorePoints = 0;
 let gameState = 'LAUNCH_MENU'; let currentGameMode = null; let betAmount = minBetAmount; let gravityScale = defaultActualGravity; let currentBallRadius = baseBallRadius; let titleFont, uiFont, slotFont; let titleY, titleSize; let uiSideMargin, uiScoreTextSize; let buttonTextSize, buttonWidth, buttonHeight; let slotTextSize; let scoreY; let speedSlider, amountSlider, betSlider, ballSizeSlider, sfxVolumeSlider, musicVolumeSlider; let sliderWidth, sliderHandleSize; let bounceAmplitude; let recentHits = []; let multiplierPanelX, multiplierPanelY, multiplierPanelWidth, multiplierPanelHeight, multiplierPanelItemHeight, multiplierPanelItemSpacing, multiplierPanelTextSize, multiplierPanelBorderRadius; let timerTextSize; let powerupTimerDisplayX; let powerupTimerDisplayY; let oddsDisplayYLine1, oddsDisplayYLine2, oddsDisplayTextSize, oddsLineSpacing;
 let creatorTextY1, creatorTextY2, creatorTextSize; let versionTextY, versionTextSize;
@@ -151,12 +167,24 @@ let launchMenuDiv; let survivalButton, highScoreButton; let menuAlpha = 0; let p
 let transitionState = 'NONE'; let transitionProgress = 0; let transitionTargetState = ''; let transitionCallback = null;
 let isHoveringSurvival = false;
 let isHoveringHighScore = false;
-let survivalHoverAnimProgress = 0;
-let highScoreHoverAnimProgress = 0;
+let survivalHoverAnimProgress = 0; // Left description panel anim
+let highScoreHoverAnimProgress = 0; // Left description panel anim
+
+// --- Hover Leaderboard Variables ---
+let survivalLeaderboardAnimProgress = 0; // Right leaderboard panel anim
+let highScoreLeaderboardAnimProgress = 0; // Right leaderboard panel anim
+let survivalLeaderboardData = null;
+let highScoreLeaderboardData = null;
+let survivalLeaderboardLoading = false;
+let highScoreLeaderboardLoading = false;
+let survivalLeaderboardError = null;
+let highScoreLeaderboardError = null;
+
+
 let gameOverState = 'NONE';
-let leaderboardData = null;
-let leaderboardLoading = false;
-let leaderboardError = null;
+let leaderboardData = null; // For end-game screen
+let leaderboardLoading = false; // For end-game screen
+let leaderboardError = null; // For end-game screen
 let leaderboardTextSize, leaderboardTitleSize, leaderboardYOffset, leaderboardEntrySpacing;
 let canvas;
 
@@ -290,9 +318,8 @@ function calculateLayout(w, h) {
     leaderboardEntrySpacing = baseLeaderboardEntrySpacing * currentScale;
 }
 
-
 // ============================ P5JS Core Functions ============================
-// ... (preload, musicLoadedCallback, setup, windowResized - no changes needed) ...
+// ... (preload, musicLoadedCallback, setup - no major changes needed, setup calls fetchAllLeaderboards) ...
 function preload() {
     titleFont = 'Impact, sans-serif';
     uiFont = 'Consolas, "Lucida Console", monospace';
@@ -330,7 +357,7 @@ function setup() {
     canvas.elt.style.display = 'block';
     rectMode(CORNER);
     colorMode(RGB);
-    pixelDensity(1);
+    pixelDensity(1); // Important for sharp text/lines
 
     // HTML Menu Setup
     launchMenuDiv = createDiv('<h3>Choose Mode:</h3>');
@@ -341,8 +368,11 @@ function setup() {
     survivalButton.mousePressed(() => { firstInteraction(); startTransition('PLAYING', selectSurvivalMode); });
     survivalButton.mouseOver(() => {
         isHoveringSurvival = true;
+        isHoveringHighScore = false; // Ensure only one hover state is active
         survivalButton.style('transform', `scale(${menuButtonHoverScale})`);
         survivalButton.style('box-shadow', `0 0 18px 6px ${menuButtonHoverGlow}`);
+        highScoreButton.style('transform', 'scale(1.0)'); // Reset other button
+        highScoreButton.style('box-shadow', 'none');
     });
     survivalButton.mouseOut(() => {
         isHoveringSurvival = false;
@@ -354,8 +384,11 @@ function setup() {
     highScoreButton.mousePressed(() => { firstInteraction(); startTransition('PLAYING', selectHighScoreMode); });
     highScoreButton.mouseOver(() => {
         isHoveringHighScore = true;
+        isHoveringSurvival = false; // Ensure only one hover state is active
         highScoreButton.style('transform', `scale(${menuButtonHoverScale})`);
         highScoreButton.style('box-shadow', `0 0 18px 6px ${menuButtonHoverGlow}`);
+        survivalButton.style('transform', 'scale(1.0)'); // Reset other button
+        survivalButton.style('box-shadow', 'none');
     });
     highScoreButton.mouseOut(() => {
         isHoveringHighScore = false;
@@ -400,15 +433,20 @@ function setup() {
 
     // Reset game over state vars
     gameOverState = 'NONE';
-    leaderboardData = null;
-    leaderboardLoading = false;
-    leaderboardError = null;
+    leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
+    // Reset hover leaderboard vars
+    survivalLeaderboardData = null; highScoreLeaderboardData = null;
+    survivalLeaderboardLoading = false; highScoreLeaderboardLoading = false;
+    survivalLeaderboardError = null; highScoreLeaderboardError = null;
+    survivalLeaderboardAnimProgress = 0; highScoreLeaderboardAnimProgress = 0;
+
 
     // Final Setup
     if (blopSound && blopSound.isLoaded()) blopSound.setVolume(sfxVolumeSlider.value);
     if (bonusSound && bonusSound.isLoaded()) bonusSound.setVolume(sfxVolumeSlider.value);
     Events.on(engine, 'collisionStart', handleCollisions);
     gameState = 'LAUNCH_MENU';
+    fetchAllLeaderboards(); // Fetch leaderboards for hover display on first launch
 }
 function windowResized() {
     calculateLayout(windowWidth, windowHeight);
@@ -452,7 +490,7 @@ function draw() {
 }
 
 // ============================ drawCurrentState() ============================
-// ... (drawCurrentState logic largely unchanged, calls updated drawHoverDescription) ...
+// ... (drawCurrentState - calls updated hover functions) ...
 function drawCurrentState() {
     if (goldLossFlashActive && frameCount > goldLossFlashEndFrame) {
         goldLossFlashActive = false;
@@ -485,26 +523,44 @@ function drawCurrentState() {
         drawMenuBackgroundEffects(menuAlpha);
         drawLaunchTitle(menuAlpha);
 
-        // Update Hover Animation Progress
-        let animStep = 1.0 / HOVER_ANIM_DURATION;
-        if (isHoveringSurvival) {
-            survivalHoverAnimProgress = min(1.0, survivalHoverAnimProgress + animStep);
-        } else {
-            survivalHoverAnimProgress = max(0.0, survivalHoverAnimProgress - animStep);
-        }
-        if (isHoveringHighScore) {
-            highScoreHoverAnimProgress = min(1.0, highScoreHoverAnimProgress + animStep);
-        } else {
-            highScoreHoverAnimProgress = max(0.0, highScoreHoverAnimProgress - animStep);
-        }
+        // --- Update Hover Animation Progress ---
+        let animStep = 1.0 / HOVER_ANIM_DURATION; // Shared duration
 
-        // Draw pop-ups (calls updated function)
+        // Left Description Panel
+        if (isHoveringSurvival) { survivalHoverAnimProgress = min(1.0, survivalHoverAnimProgress + animStep); }
+        else { survivalHoverAnimProgress = max(0.0, survivalHoverAnimProgress - animStep); }
+
+        if (isHoveringHighScore) { highScoreHoverAnimProgress = min(1.0, highScoreHoverAnimProgress + animStep); }
+        else { highScoreHoverAnimProgress = max(0.0, highScoreHoverAnimProgress - animStep); }
+
+        // Right Leaderboard Panel
+        if (isHoveringSurvival) { survivalLeaderboardAnimProgress = min(1.0, survivalLeaderboardAnimProgress + animStep); }
+        else { survivalLeaderboardAnimProgress = max(0.0, survivalLeaderboardAnimProgress - animStep); }
+
+        if (isHoveringHighScore) { highScoreLeaderboardAnimProgress = min(1.0, highScoreLeaderboardAnimProgress + animStep); }
+        else { highScoreLeaderboardAnimProgress = max(0.0, highScoreLeaderboardAnimProgress - animStep); }
+
+
+        // --- Draw Hover Pop-ups ---
         if (launchMenuDiv && transitionState === 'NONE') {
-             if (survivalHoverAnimProgress > 0) {
-                drawHoverDescription(survivalButton, survivalDescriptionText, survivalHoverAnimProgress, 'TOP', 'SURVIVAL'); // <<< Pass mode type
+            // Draw Left Description Pop-up
+            if (survivalHoverAnimProgress > 0) {
+                // Survival Description slides from TOP
+                drawHoverDescription(survivalButton, survivalDescriptionText, survivalHoverAnimProgress, 'TOP', 'SURVIVAL');
             }
             if (highScoreHoverAnimProgress > 0) {
-                drawHoverDescription(highScoreButton, highScoreDescriptionText, highScoreHoverAnimProgress, 'BOTTOM', 'HIGHSCORE'); // <<< Pass mode type
+                // <<< CHANGED: High Score Description slides from BOTTOM >>>
+                drawHoverDescription(highScoreButton, highScoreDescriptionText, highScoreHoverAnimProgress, 'BOTTOM', 'HIGHSCORE');
+            }
+
+            // Draw Right Leaderboard Pop-up
+            if (survivalLeaderboardAnimProgress > 0) {
+                // <<< CHANGED: Survival Leaderboard slides from BOTTOM >>>
+                drawHoverLeaderboard('survival', survivalLeaderboardAnimProgress, survivalLeaderboardData, survivalLeaderboardLoading, survivalLeaderboardError);
+            }
+            if (highScoreLeaderboardAnimProgress > 0) {
+                 // <<< CHANGED: High Score Leaderboard slides from TOP >>>
+                drawHoverLeaderboard('highscore', highScoreLeaderboardAnimProgress, highScoreLeaderboardData, highScoreLeaderboardLoading, highScoreLeaderboardError);
             }
         }
 
@@ -644,7 +700,7 @@ function drawCurrentState() {
                  } else {
                      console.error("Cannot show leaderboard form - element not found!");
                      gameOverState = 'SHOWING_LEADERBOARD';
-                     fetchLeaderboardData();
+                     fetchLeaderboardData('endgame', currentGameMode); // Pass mode for endgame fetch
                  }
              });
              isGameOverFromDecay = false;
@@ -664,10 +720,13 @@ function startTransition(targetState, callback = null) {
     if(gameState === 'GAME_OVER' || gameOverState === 'SHOWING_FORM') {
         hideLeaderboardForm();
     }
+    // Reset hover states for panels during transition
     isHoveringSurvival = false;
     isHoveringHighScore = false;
     survivalHoverAnimProgress = 0;
     highScoreHoverAnimProgress = 0;
+    survivalLeaderboardAnimProgress = 0;
+    highScoreLeaderboardAnimProgress = 0;
 }
 
 function handleTransition() {
@@ -689,6 +748,10 @@ function handleTransition() {
                 isHoveringHighScore = false;
                 survivalHoverAnimProgress = 0;
                 highScoreHoverAnimProgress = 0;
+                survivalLeaderboardAnimProgress = 0; // Reset leaderboard anim on fade in
+                highScoreLeaderboardAnimProgress = 0;
+                // Fetch leaderboards again when returning to menu
+                fetchAllLeaderboards();
             }
             if(previousGameState === 'GAME_OVER' && gameState !== 'GAME_OVER') { hideLeaderboardForm(); }
         }
@@ -723,7 +786,21 @@ function prepareGameForMode() { if (!currentGameMode) { console.error("Cannot pr
 
 
 // ============================ Helper Functions ============================
-// (No changes needed)
+// ... (getLaunchMenuCanvasRect - no changes needed) ...
+function getLaunchMenuCanvasRect() {
+    if (!launchMenuDiv) return null;
+    const menuPos = launchMenuDiv.position();
+    const menuSize = launchMenuDiv.size();
+    const canvasOffsetX = (windowWidth - scaledCanvasWidth) / 2;
+    const canvasOffsetY = (windowHeight - scaledCanvasHeight) / 2;
+    return {
+        x: menuPos.x - canvasOffsetX,
+        y: menuPos.y - canvasOffsetY,
+        width: menuSize.width,
+        height: menuSize.height
+    };
+}
+
 
 // ============================ Starfield & Effects Setup / Drawing ============================
 // ... (setupMenuEffects, drawMenuBackgroundEffects, setupStarfield, drawStarfield - no changes needed) ...
@@ -740,476 +817,209 @@ function updateAndDrawRipples() { push(); noFill(); for (let i = activeRipples.l
 function createBackgroundRipple(centerX, centerY) { const scaledPegRadius = basePegRadius * currentScale; const scaledMaxRadius = scaledPegRadius * backgroundRippleMaxRadiusFactor; const scaledStartWeight = max(1, backgroundRippleStartWeight * currentScale); const scaledEndWeight = max(0.1, backgroundRippleEndWeight * currentScale); let ripple = { cx: centerX, cy: centerY, lifespan: backgroundRippleLifespan, maxLifespan: backgroundRippleLifespan, initialRadius: scaledPegRadius * 0.5, maxRadius: scaledMaxRadius, radius: scaledPegRadius * 0.5, initialAlpha: backgroundRippleInitialAlpha, alpha: backgroundRippleInitialAlpha, color: backgroundRippleColor, strokeWeightStart: scaledStartWeight, strokeWeightEnd: scaledEndWeight, strokeWeight: scaledStartWeight }; backgroundRipples.push(ripple); }
 function updateAndDrawBackgroundRipples() { push(); noFill(); for (let i = backgroundRipples.length - 1; i >= 0; i--) { let r = backgroundRipples[i]; r.lifespan--; if (r.lifespan <= 0) { backgroundRipples.splice(i, 1); } else { let progress = 1.0 - (r.lifespan / r.maxLifespan); let easedProgressRadius = 1 - pow(1 - progress, 3); r.radius = lerp(r.initialRadius, r.maxRadius, easedProgressRadius); let easedProgressAlpha = pow(progress, 2); r.alpha = lerp(r.initialAlpha, 0, easedProgressAlpha); r.strokeWeight = lerp(r.strokeWeightStart, r.strokeWeightEnd, progress); if (r.alpha > 1 && r.strokeWeight > 0.1) { stroke(r.color[0], r.color[1], r.color[2], r.alpha); strokeWeight(r.strokeWeight); ellipse(r.cx, r.cy, r.radius * 2); } } } noStroke(); pop(); }
 
-
 // ============================ Drawing Helpers ============================
-// ... (drawPegs, drawBalls, drawFunnels, drawMultiplierPanel, drawPowerupTimer - no changes needed) ...
-// ... (drawSlots, drawTitle, drawLaunchTitle, drawEnhancedUIText - no changes needed) ...
-// ... (drawGameUI, drawGameOverOverlay, drawLeaderboard, drawNeonButton - no changes needed) ...
-// ... (drawSlider, drawStatisticsBars, drawMarker - no changes needed) ...
-// --- ADDED/UPDATED Hover Description Icon Drawing Functions --- (No changes needed in these icon functions themselves)
-function drawPegs() { push(); const scaledPegRadius = basePegRadius * currentScale; const glowSize = scaledPegRadius * basePegGlowSizeIncrease; const scaledBaseShadowBlur = basePegShadowBlur * currentScale; noStroke(); for (let peg of pegs) { if (!Composite.get(world, peg.id, 'body')) continue; let currentRadius = scaledPegRadius; let currentShadowColor = 'rgba(180, 220, 255, 0.5)'; let currentShadowBlur = scaledBaseShadowBlur; let baseColor = color(255, 255, 255, 230); if (peg.plugin?.glowTimer > 0) { let glowProgress = map(peg.plugin.glowTimer, pegGlowDuration, 0, 1, 0); currentRadius = lerp(scaledPegRadius, glowSize, glowProgress); fill(255, 255, 255, lerp(230, 255, glowProgress)); currentShadowBlur = lerp(scaledBaseShadowBlur, max(10, 20 * currentScale), glowProgress); currentShadowColor = `rgba(255, 255, 255, ${lerp(0.5, 0.9, glowProgress)})`; peg.plugin.glowTimer--; } else { fill(baseColor); } drawingContext.shadowBlur = currentShadowBlur; drawingContext.shadowColor = currentShadowColor; ellipse(peg.position.x, peg.position.y, currentRadius * 2); drawingContext.shadowBlur = 0; } drawingContext.shadowBlur = 0; pop(); }
-function drawBalls() { push(); const scaledBallRadius = currentBallRadius * currentScale; for (let i = balls.length - 1; i >= 0; i--) { let ball = balls[i]; if (!Composite.get(world, ball.id, 'body')) { console.warn(`Ball body ${ball.id} not found in world, removing from drawing array.`); balls.splice(i, 1); continue; } if (showTrails && ball.plugin?.path?.length > 1) { push(); noFill(); let ballColor = color(neonBlue[0], neonBlue[1], neonBlue[2]); let transparentColor = color(neonBlue[0], neonBlue[1], neonBlue[2], 0); for (let j = 1; j < ball.plugin.path.length; j++) { let segmentRatio = (j - 1) / (ball.plugin.path.length - 2 || 1); let currentAlpha = lerp(trailEndAlpha, trailStartAlpha, segmentRatio); let currentWeight = lerp(trailEndWeightFactor, trailStartWeightFactor, segmentRatio); currentWeight *= scaledBallRadius * 2; currentWeight = max(1, currentWeight); stroke(ballColor.levels[0], ballColor.levels[1], ballColor.levels[2], currentAlpha); strokeWeight(currentWeight); strokeCap(ROUND); line(ball.plugin.path[j - 1].x, ball.plugin.path[j - 1].y, ball.plugin.path[j].x, ball.plugin.path[j].y); } pop(); } let ballDrawColor = neonBlue; let glowColor = 'rgba(100, 220, 255, 0.7)'; push(); translate(ball.position.x, ball.position.y); rotate(ball.angle); fill(ballDrawColor[0], ballDrawColor[1], ballDrawColor[2]); noStroke(); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = glowColor; ellipse(0, 0, scaledBallRadius * 2); drawingContext.shadowBlur = 0; pop(); if (ball.position.y > scaledCanvasHeight + scaledBallRadius * 5 || ball.position.x < -scaledBallRadius * 5 || ball.position.x > gameAreaWidth + scaledBallRadius * 5) { if (DEBUG_MODE) console.log(`Removing off-screen ball ${ball.id}`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } balls.splice(i, 1); } } pop(); }
-function drawFunnels() { push(); if (!slotStartY || !dividers || dividers.length < numSlots + 1) { pop(); return; } const funnelTopActualY = slotStartY - 5 * currentScale; const scaledSlotHeight = baseSlotHeight * currentScale; stroke(funnelColor[0], funnelColor[1], funnelColor[2], funnelColor[3]); strokeWeight(max(1, 1.5 * currentScale)); for (let i = 1; i < dividers.length - 1; i++) { if (!dividers[i] || !dividers[i].position) continue; line(dividers[i].position.x, funnelTopActualY, dividers[i].position.x, slotStartY + scaledSlotHeight); } pop(); }
-function drawMultiplierPanel() { push(); const panelX = multiplierPanelX; const panelY = multiplierPanelY; const panelW = multiplierPanelWidth; const panelH = multiplierPanelHeight; const itemH = multiplierPanelItemHeight; const itemS = multiplierPanelItemSpacing; const borderRadius = multiplierPanelBorderRadius; const txtSize = multiplierPanelTextSize; let hasVisibleHits = false; for (let i = 0; i < recentHits.length; i++) { let hit = recentHits[i]; let age = frameCount - hit.timestamp; if (age <= multiplierDisplayDuration) { hasVisibleHits = true; break; } } if (!hasVisibleHits) { for (let i = recentHits.length - 1; i >= 0; i--) { if (frameCount - recentHits[i].timestamp > multiplierDisplayDuration) { recentHits.splice(i, 1); } } pop(); return; } let currentY = panelY + itemS; const panelBottomBoundary = panelY + panelH - itemS; let maxItemsToShow = floor((panelH - itemS * 2) / (itemH + itemS)); maxItemsToShow = max(0, maxItemsToShow); let startIndex = max(0, recentHits.length - maxItemsToShow); for (let i = recentHits.length - 1; i >= startIndex; i--) { let hit = recentHits[i]; let age = frameCount - hit.timestamp; if (age > multiplierDisplayDuration) continue; let fadeProgress = age / multiplierDisplayDuration; let alpha = 255 * (1 - fadeProgress * fadeProgress); alpha = constrain(alpha, 0, 255); if (alpha > 5) { if (currentY + itemH > panelBottomBoundary) { break; } fill(multiplierDisplayOrange[0], multiplierDisplayOrange[1], multiplierDisplayOrange[2], alpha * 0.9); noStroke(); rect(panelX + itemS, currentY, panelW - 2 * itemS, itemH, borderRadius * 0.7); fill(255, 255, 255, alpha); textFont(uiFont); textSize(txtSize); textAlign(CENTER, CENTER); let multValue = hit.value; let decimals = (abs(multValue) < 1 && multValue !== 0) ? 1 : 0; let multText = nf(multValue, 0, decimals) + 'x'; text(multText, panelX + panelW / 2, currentY + itemH / 2 + (1 * currentScale)); currentY += (itemH + itemS); } } for (let i = recentHits.length - 1; i >= 0; i--) { if (frameCount - recentHits[i].timestamp > multiplierDisplayDuration) { recentHits.splice(i, 1); } } pop(); }
-function drawPowerupTimer() { push(); if (!isDoubleDropActive && !isDoubleMultiplierActive) { pop(); return; } let maxTimeFrames = 0; if (isDoubleDropActive) maxTimeFrames = max(maxTimeFrames, doubleDropTimer); if (isDoubleMultiplierActive) maxTimeFrames = max(maxTimeFrames, doubleMultiplierTimer); let secondsLeft = ceil(maxTimeFrames / 60.0); if (secondsLeft <= 0) { pop(); return; } let powerupLabel = ""; if (isDoubleDropActive && isDoubleMultiplierActive) { powerupLabel = (doubleDropTimer > doubleMultiplierTimer) ? "Double Drop" : "2x Multiplier"; } else if (isDoubleDropActive) { powerupLabel = "Double Drop"; } else if (isDoubleMultiplierActive) { powerupLabel = "2x Multiplier"; } let timerText = `${powerupLabel}: ${secondsLeft}s`; let displayX = powerupTimerDisplayX; let displayY = powerupTimerDisplayY; let flickerColor = random(powerupTimerFlickerColors); textFont(uiFont); textSize(timerTextSize); textAlign(LEFT, TOP); let glowAmount = max(4, 12 * currentScale); drawingContext.shadowBlur = glowAmount; drawingContext.shadowColor = `rgba(${flickerColor[0]}, ${flickerColor[1]}, ${flickerColor[2]}, 0.7)`; fill(flickerColor); noStroke(); text(timerText, displayX, displayY); drawingContext.shadowBlur = 0; pop(); }
-function drawSlots() {
-    push();
-    const scaledSlotTextSize = slotTextSize;
-    const scaledSlotHeight = baseSlotHeight * currentScale;
-    let scaledBounceAmplitude = bounceAmplitude;
-    textFont(slotFont);
-    if (!dividers || dividers.length !== numSlots + 1) { pop(); return; }
-    if (typeof slotStartY === 'undefined') { pop(); return; }
-    for (let i = 0; i < numSlots; i++) {
-        if (!dividers[i] || !dividers[i + 1] || !dividers[i].position || !dividers[i+1].position) { continue; }
-        let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x;
-        let slotCenterX = (dividerLeftX + dividerRightX) / 2;
-        let currentSlotWidth = dividerRightX - dividerLeftX; if (currentSlotWidth <= 0) { currentSlotWidth = 1; }
-        let slotX = slotCenterX - currentSlotWidth / 2; let slotY = slotStartY;
-        let bounceOffsetY = 0;
-        if (slotBounceState[i] > 0) { let bounceProgress = map(slotBounceState[i], bounceDuration, 0, 0, PI); bounceOffsetY = scaledBounceAmplitude * sin(bounceProgress); slotBounceState[i]--; }
-        let baseMultiplier = slotMultipliers[i];
-        let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(25 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1);
-        let slotColor;
-        if (colorFactor < 0.5) { slotColor = lerpColor(color(255, 255, 0), color(255, 165, 0), map(colorFactor, 0, 0.5, 0, 1)); } else { slotColor = lerpColor(color(255, 165, 0), color(200, 0, 0), map(colorFactor, 0.5, 1, 0, 1)); }
-        fill(slotColor); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight);
-        if (slotGlowState[i] > 0) { let glowProgress = map(slotGlowState[i], slotGlowDuration, 0, 1, 0); let glowAlpha = map(pow(glowProgress, 0.5), 1, 0, slotGlowMaxAlpha, 0); fill(slotGlowColor[0], slotGlowColor[1], slotGlowColor[2], glowAlpha); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); slotGlowState[i]--; }
-        let brightnessValue = (red(slotColor) * 299 + green(slotColor) * 587 + blue(slotColor) * 114) / 1000; let textColor = brightnessValue > 125 ? color(0) : color(255);
-        fill(textColor); textAlign(CENTER, CENTER);
-        let currentMultiplier = baseMultiplier; if (currentGameMode === 'SURVIVAL' && isDoubleMultiplierActive) { currentMultiplier *= 2; }
-        let multiplierText = nf(currentMultiplier, 0, (currentMultiplier < 1 && currentMultiplier !== 0) ? 1 : 0) + 'x';
-        let textY = (slotY + scaledSlotHeight / 2) - bounceOffsetY;
-        textSize(scaledSlotTextSize);
-        text(multiplierText, slotCenterX, textY);
-    }
-    pop();
-}
-function drawTitle() { push(); textFont(titleFont); textSize(titleSize); textAlign(CENTER, TOP); let titleText = "DROP"; let x = gameAreaWidth / 2; let y = titleY; let offset = titleSize * 0.03; fill(titleColorShadow[0], titleColorShadow[1], titleColorShadow[2], 180); text(titleText, x + offset, y + offset); let grad = drawingContext.createLinearGradient(x - titleSize, y, x + titleSize, y + titleSize); grad.addColorStop(0, `rgb(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]})`); grad.addColorStop(0.5, `rgb(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]})`); grad.addColorStop(1, `rgb(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]})`); drawingContext.fillStyle = grad; text(titleText, x, y); fill(titleColorHighlight[0], titleColorHighlight[1], titleColorHighlight[2], 100); text(titleText, x - offset * 0.5, y - offset * 0.5); pop(); }
-function drawLaunchTitle(alpha) { if (alpha <= 0) return; push(); let launchTitleSize = titleSize * 2.0; textFont(titleFont); textSize(launchTitleSize); textAlign(CENTER, CENTER); let titleText = "DROP"; let x = scaledCanvasWidth / 2; let y = scaledCanvasHeight * 0.3; let baseOffset = launchTitleSize * 0.035; let numLayers = 5; let liquidSpeed = 0.03; let liquidShiftAmount = launchTitleSize * 0.1; let highlightShift = sin(frameCount * liquidSpeed) * liquidShiftAmount; for (let i = numLayers; i >= 1; i--) { let layerOffset = baseOffset * i; let layerAlphaMultiplier = pow((numLayers - i) / numLayers, 1.5); let shadowIntensity = map(i, 1, numLayers, 0.5, 0.9); fill( titleColorShadow[0] * shadowIntensity, titleColorShadow[1] * shadowIntensity, titleColorShadow[2] * shadowIntensity, 190 * layerAlphaMultiplier * (alpha / 255) ); text(titleText, x + layerOffset, y + layerOffset); } let grad = drawingContext.createLinearGradient( x - launchTitleSize * 0.6 + highlightShift, y - launchTitleSize * 0.4, x + launchTitleSize * 0.6 + highlightShift, y + launchTitleSize * 0.4 ); let hRGBA = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.9 * alpha / 255})`; let bRGBA = `rgba(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]}, ${1.0 * alpha / 255})`; let mSR = lerp(titleColorShadow[0], titleColorBase[0], 0.4); let mSG = lerp(titleColorShadow[1], titleColorBase[1], 0.4); let mSB = lerp(titleColorShadow[2], titleColorBase[2], 0.4); let mSRGBA = `rgba(${mSR}, ${mSG}, ${mSB}, ${1.0 * alpha / 255})`; let sRGBA = `rgba(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]}, ${0.8 * alpha / 255})`; grad.addColorStop(0, hRGBA); grad.addColorStop(0.4, bRGBA); grad.addColorStop(0.8, mSRGBA); grad.addColorStop(1, sRGBA); drawingContext.fillStyle = grad; text(titleText, x, y); let glowBlur = max(5, 25 * currentScale) * (alpha / 255); let glowColor = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.5 * (alpha / 255)})`; drawingContext.shadowBlur = glowBlur; drawingContext.shadowColor = glowColor; drawingContext.fillStyle = grad; text(titleText, x, y); drawingContext.shadowBlur = 0; drawingContext.shadowColor = 'rgba(0,0,0,0)'; pop(); }
-function drawEnhancedUIText(txt, x, y, size, fillColor = color(230), align = LEFT) { push(); textFont(uiFont); textSize(size); textAlign(align, TOP); fill(uiTextOutlineColor[0], uiTextOutlineColor[1], uiTextOutlineColor[2], uiTextOutlineColor[3]); let outlineOffset = max(1, 1.5 * currentScale); text(txt, x + outlineOffset, y + outlineOffset); drawingContext.shadowBlur = 0; fill(fillColor); text(txt, x, y); pop(); }
-function drawGameUI() {
-    push(); textFont(uiFont); fill(230, 230, 240, 220); textAlign(LEFT, TOP);
-    let textX = uiSideMargin; let goldTextY = scoreY;
-    let scoreColor = color(230, 230, 240, 220);
-    if (currentGameMode === 'SURVIVAL' && goldLossFlashActive) { let flashProgress = (goldLossFlashEndFrame - frameCount) / pointsLossFlashDurationFrames; let flashSin = sin(flashProgress * PI); scoreColor = lerpColor(color(230, 230, 240, 220), color(brightRed[0], brightRed[1], brightRed[2]), flashSin); }
 
-    let goldText = `Gold: ${floor(score)}`;
-    drawEnhancedUIText(goldText, textX, goldTextY, uiScoreTextSize, scoreColor, LEFT);
-
-    let rightSideTopY = scoreY - uiScoreTextSize - (3 * currentScale);
-    let rightSideBottomY = scoreY;
-    if (currentGameMode === 'HIGHSCORE') {
-        let highScorePointsText = `Total points earned: ${highScorePoints}`;
-        drawEnhancedUIText(highScorePointsText, gameAreaWidth - uiSideMargin, rightSideTopY, uiScoreTextSize, color(230), RIGHT);
-        let ballsLeftText = `Balls Left: ${ballsRemaining}`;
-        drawEnhancedUIText(ballsLeftText, gameAreaWidth - uiSideMargin, rightSideBottomY, uiScoreTextSize, color(230), RIGHT);
-    } else if (currentGameMode === 'SURVIVAL') {
-        let survivalPointsText = `Total Points Earned: ${sessionScore}`;
-        drawEnhancedUIText(survivalPointsText, gameAreaWidth - uiSideMargin, rightSideBottomY, uiScoreTextSize, color(230), RIGHT);
-    }
-    if (currentGameMode === 'SURVIVAL') {
-        let decayTextY = goldTextY + uiScoreTextSize + (5 * currentScale);
-        let decayInfoText = ""; let showLossText = true;
-        let now = millis(); let timeToNext = nextDecayTime - now;
-        let secsToNext = ceil(max(0, timeToNext) / 1000);
-        let percent = (currentDecayPercent * 100).toFixed(0);
-        decayInfoText = `Gold Loss: ${percent}% (Next: ${secsToNext}s)`;
-        if (isGoldLossCountdownActive || goldLossMessageActive) { showLossText = false; }
-        if (showLossText && nextDecayTime !== Infinity) {
-            let decayTextSize = uiScoreTextSize * 0.85;
-            let decayTextColor = color(200, 200, 200, 220);
-            drawEnhancedUIText(decayInfoText, uiSideMargin, decayTextY, decayTextSize, decayTextColor, LEFT);
-        }
-    }
-    let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY;
-    let dropBtnW = buttonWidth; let dropBtnH = buttonHeight;
-    let dropButtonTextSize = max(7, baseButtonTextSize * currentScale * 1.3);
-    let canDrop = false; let dropLabel = "";
-    if (currentGameMode === 'SURVIVAL') { let totalDropCost = betAmount; canDrop = (score >= totalDropCost); dropLabel = `Drop (Cost: ${totalDropCost})`; }
-    else if (currentGameMode === 'HIGHSCORE') { canDrop = (ballsRemaining > 0); dropLabel = `Drop Ball (${ballsRemaining} left)`; }
-    drawNeonButton( dropLabel, dropBtnX, dropBtnY, dropBtnW, dropBtnH, neonBlue, 0, uiFont, dropButtonTextSize, canDrop && gameState === 'PLAYING' );
-    pop();
-}
-function drawGameOverOverlay() { push(); fill(0, 0, 0, 190); rect(0, 0, gameAreaWidth, scaledCanvasHeight); textFont(titleFont); textAlign(CENTER, CENTER); if (gameOverState === 'SHOWING_FORM') { let message = ""; let messageSize = max(26, 52 * currentScale); let messageY = scaledCanvasHeight * 0.35; let messageColor = color(220, 220, 220); if (currentGameMode === 'SURVIVAL') { message = "Game Over"; messageColor = color(trueRed[0], trueRed[1], trueRed[2]); let sessionScoreY = messageY + messageSize * 0.7; let sessionScoreSize = messageSize * 0.6; textSize(sessionScoreSize); fill(220, 220, 180); drawingContext.shadowBlur = max(4, 12 * currentScale); drawingContext.shadowColor = 'rgba(220, 220, 180, 0.6)'; text(`Total Points: ${sessionScore}`, gameAreaWidth / 2, sessionScoreY); drawingContext.shadowBlur = 0; } else if (currentGameMode === 'HIGHSCORE') { message = `TOTAL POINTS: ${highScorePoints}`; messageColor = color(neonGreen[0], neonGreen[1], neonGreen[2]); } textSize(messageSize); drawingContext.shadowBlur = max(8, 18 * currentScale); drawingContext.shadowColor = messageColor.toString(); fill(messageColor); text(message, gameAreaWidth / 2, messageY); drawingContext.shadowBlur = 0; const form = document.getElementById('leaderboard-form'); if (form && form.style.display !== 'none') { positionLeaderboardForm(form); } } else if (gameOverState === 'SHOWING_LEADERBOARD') { let titleY = leaderboardYOffset; textSize(leaderboardTitleSize); fill(220, 200, 255); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = 'rgba(220, 200, 255, 0.5)'; text("Leaderboard", gameAreaWidth / 2, titleY); drawingContext.shadowBlur = 0; drawLeaderboard(); let btnW = buttonWidth * gameOverButtonWidthScale; let btnH = buttonHeight * gameOverButtonHeightScale; let btnX = gameAreaWidth / 2 - btnW / 2; let spacing = gameOverButtonSpacing * currentScale; let btnFontSize = max(10, baseButtonTextSize * currentScale * 1.6); let menuBtnY = scaledCanvasHeight - spacing * 1.5 - btnH; let restartBtnY = menuBtnY - spacing - btnH; drawNeonButton("Restart", btnX, restartBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); drawNeonButton("Menu", btnX, menuBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); } pop(); }
-function drawLeaderboard() { push(); textFont(uiFont); textSize(leaderboardTextSize); textAlign(LEFT, TOP); let startY = leaderboardYOffset + leaderboardTitleSize + 20 * currentScale; let lineH = (leaderboardTextSize + leaderboardEntrySpacing) * 1.3; const maxRankStr = "10."; const maxNameStr = "WWWWWWWWWW"; const maxScoreStr = "9,999,999"; const rankColWidth = textWidth(maxRankStr) + 5 * currentScale; const nameColWidth = textWidth(maxNameStr) + 15 * currentScale; const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale; const totalContentWidth = rankColWidth + nameColWidth + scoreColWidth; const leaderboardCenterX = gameAreaWidth / 2; const blockStartX = leaderboardCenterX - totalContentWidth / 2; const rankColumnX = blockStartX; const nameColumnX = rankColumnX + rankColWidth; const scoreColumnAlignX = nameColumnX + nameColWidth + scoreColWidth; const strongGold = color(255, 190, 0); const mediumGold = color(255, 215, 0); const lightGold = color(255, 235, 100); const defaultColor = color(210, 210, 230); if (leaderboardLoading) { textAlign(CENTER, TOP); fill(200); textStyle(NORMAL); text("Loading Leaderboard...", leaderboardCenterX, startY); } else if (leaderboardError) { textAlign(CENTER, TOP); fill(softRed[0], softRed[1], softRed[2]); textStyle(NORMAL); text(`Error: ${leaderboardError}`, leaderboardCenterX, startY); text("Could not load leaderboard.", leaderboardCenterX, startY + lineH); } else if (leaderboardData && leaderboardData.length > 0) { let bottomButtonAreaY = scaledCanvasHeight - (buttonHeight * gameOverButtonHeightScale * 2 + gameOverButtonSpacing * currentScale * 3); let availableHeight = bottomButtonAreaY - startY; let maxVisibleEntries = floor(availableHeight / lineH); maxVisibleEntries = max(0, maxVisibleEntries); for (let i = 0; i < min(leaderboardData.length, maxVisibleEntries); i++) { let entry = leaderboardData[i]; let rank = i + 1; let nameStr = (entry.player_name || 'ANONYMOUS').toUpperCase().substring(0, 10); let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A'; let rankStr = `${rank}.`; let entryColor = defaultColor; let applyBold = false; if (i === 0) { entryColor = lightGold; applyBold = true; } else if (i === 1) { entryColor = mediumGold; applyBold = true; } else if (i === 2) { entryColor = strongGold; applyBold = true; } if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); } fill(entryColor); let currentY = startY + i * lineH; textAlign(LEFT, TOP); text(rankStr, rankColumnX, currentY); textAlign(LEFT, TOP); text(nameStr, nameColumnX, currentY); textAlign(RIGHT, TOP); text(scoreStr, scoreColumnAlignX, currentY); } textStyle(NORMAL); if (leaderboardData.length > maxVisibleEntries) { fill(180); textAlign(CENTER, TOP); text("...", leaderboardCenterX, startY + maxVisibleEntries * lineH); } } else if (leaderboardData) { fill(180); textAlign(CENTER, TOP); textStyle(NORMAL); text("Leaderboard is empty.", leaderboardCenterX, startY); } else { fill(150); textAlign(CENTER, TOP); textStyle(NORMAL); text("No leaderboard data.", leaderboardCenterX, startY); } pop(); }
-function drawNeonButton(label, x, y, w, h, baseColor, cost = 0, font = uiFont, fontSize = 15, enabled = true) { push(); noStroke(); translate(x, y); let cornerRadius = h * 0.3; let gradColorLight, gradColorDark, glowColor, textColor; let isDisabled = !enabled; if (isDisabled) { gradColorLight = color(80, 80, 90, 200); gradColorDark = color(50, 50, 60, 200); glowColor = color(0, 0, 0, 0); textColor = color(140, 140, 150); } else { gradColorLight = color(baseColor[0], baseColor[1], baseColor[2], 255); gradColorDark = color(baseColor[0] * 0.6, baseColor[1] * 0.6, baseColor[2] * 0.6, 255); glowColor = color(baseColor[0], baseColor[1], baseColor[2], 180); textColor = color(255); } if (enabled) { drawingContext.shadowBlur = max(6, 22 * currentScale); drawingContext.shadowColor = glowColor.toString(); } else { drawingContext.shadowBlur = 0; } let grad = drawingContext.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, gradColorLight.toString()); grad.addColorStop(1, gradColorDark.toString()); drawingContext.fillStyle = grad; rect(0, 0, w, h, cornerRadius); drawingContext.shadowBlur = 0; fill(textColor); textFont(font); textSize(fontSize); textAlign(CENTER, CENTER); text(label, w / 2, h / 2 + max(1, 1.5 * currentScale)); pop(); }
-function drawSlider(slider) { if (!slider) return; push(); let sliderXRelative = slider.x; let trackY = slider.y + 25 * currentScale; let scaledFontSize = max(8, 12 * currentScale); let isDisabled = slider.enabled !== undefined && !slider.enabled; let labelColor = isDisabled ? color(120) : color(220); let trackColor = isDisabled ? color(80) : color(120); let handleColor = isDisabled ? color(100) : neonYellow; let handleGlow = isDisabled ? 'rgba(100, 100, 100, 0)' : 'rgba(255, 255, 0, 0.7)'; let valueColor = isDisabled ? color(120) : color(220); fill(labelColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, BOTTOM); text(slider.label, sliderXRelative + sliderWidth / 2, trackY - 6 * currentScale); stroke(trackColor); strokeWeight(max(2, 4 * currentScale)); line(sliderXRelative, trackY, sliderXRelative + sliderWidth, trackY); let handleXRelative = map(slider.value, slider.minVal, slider.maxVal, sliderXRelative, sliderXRelative + sliderWidth); handleXRelative = constrain(handleXRelative, sliderXRelative, sliderXRelative + sliderWidth); noStroke(); fill(handleColor); if (!isDisabled) { drawingContext.shadowBlur = max(4, 10 * currentScale); drawingContext.shadowColor = handleGlow; } ellipse(handleXRelative, trackY, sliderHandleSize, sliderHandleSize); drawingContext.shadowBlur = 0; fill(valueColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, TOP); let valueText = ""; if (slider === musicVolumeSlider) { valueText = floor(slider.value); } else if (slider === speedSlider) { valueText = slider.value.toFixed(1) + 'x'; } else if (slider === sfxVolumeSlider) { valueText = slider.value.toFixed(2); } else { valueText = floor(slider.value); } text(valueText, sliderXRelative + sliderWidth / 2, trackY + 8 * currentScale); pop(); }
-function drawStatisticsBars() { push(); const chartHeightMax = max(40, 80 * currentScale); const chartWidth = max(90, 180 * currentScale); const chartX = gameAreaWidth - chartWidth - max(5, 10 * currentScale); const chartY = max(40, 80 * currentScale); let maxHitCount = 0; for (let count of slotHitCounts) { if (count > maxHitCount) { maxHitCount = count; } } if (maxHitCount === 0) { stroke(100); strokeWeight(max(1, 1 * currentScale)); line(chartX, chartY + chartHeightMax, chartX + chartWidth, chartY + chartHeightMax); noStroke(); pop(); return; } const barWidth = chartWidth / numSlots; translate(chartX, chartY); for (let i = 0; i < numSlots; i++) { let count = slotHitCounts[i]; let barH = map(count, 0, maxHitCount, 0, chartHeightMax); let barX = i * barWidth; let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(25 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let barColor = colorFactor < 0.5 ? lerpColor(color(255, 255, 0, 200), color(255, 165, 0, 200), map(colorFactor, 0, 0.5, 0, 1)) : lerpColor(color(255, 165, 0, 200), color(200, 0, 0, 200), map(colorFactor, 0.5, 1, 0, 1)); let currentBarColor = barColor; if (histogramBarPulseState[i] > 0) { let pulseProgress = map(histogramBarPulseState[i], histogramPulseDuration, 0, 1, 0); let pulseBrightness = lerp(1.0, 1.8, pulseProgress * pulseProgress); currentBarColor = color( min(255, red(barColor) * pulseBrightness), min(255, green(barColor) * pulseBrightness), min(255, blue(barColor) * pulseBrightness), alpha(barColor) ); histogramBarPulseState[i]--; } fill(currentBarColor); noStroke(); rect(barX, chartHeightMax - barH, barWidth - max(1, 1 * currentScale), barH); } stroke(150); strokeWeight(max(1, 1 * currentScale)); line(0, chartHeightMax, chartWidth, chartHeightMax); noStroke(); pop(); }
-function drawMarker() { if (gameState !== 'PLAYING' || markerX === undefined || markerY === undefined) return; push(); fill(markerColor); noStroke(); ellipse(markerX, markerY, markerSize * 1.2, markerSize * 1.2); pop(); }
-
-function drawCoinIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let pulseScale = lerp(1.0, 1.1, animProgress);
-    fill(255, 215, 0, alpha); // Gold color
-    noStroke();
-    ellipse(x + size / 2, y + size / 2, size * pulseScale, size * pulseScale);
-    fill(200, 160, 0, alpha); // Darker gold for detail
-    ellipse(x + size / 2, y + size / 2, size * 0.6 * pulseScale, size * 0.6 * pulseScale);
-    pop();
-}
-
-function drawBallIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let pulseScale = lerp(1.0, 1.1, animProgress);
-    fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha);
-    noStroke();
-    ellipse(x + size / 2, y + size / 2, size * pulseScale, size * pulseScale);
-    pop();
-}
-
-function drawLockIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let bodyH = size * 0.6;
-    let bodyW = size * 0.7;
-    let shackleThick = size * 0.15;
-    let shackleDiam = size * 0.5;
-    let pulseShift = lerp(0, size * 0.05, animProgress);
-
-    fill(180, 180, 180, alpha); // Body color
-    noStroke();
-    rect(x + (size - bodyW) / 2, y + size * 0.3 + pulseShift, bodyW, bodyH, size * 0.1); // Centered body shifted down slightly
-
-    noFill();
-    stroke(220, 220, 220, alpha); // Shackle color
-    strokeWeight(shackleThick);
-    arc(x + size / 2, y + size * 0.3 + pulseShift, shackleDiam, shackleDiam, PI, TWO_PI); // Position shackle above body
-    pop();
-}
-
-// Updated Trophy Icon
-function drawTrophyIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let glowAmount = lerp(0, NEON_GLOW_MAX_BLUR * 0.5 * currentScale, animProgress);
-    let baseCol = color(255, 215, 0, alpha); // Gold color
-    let glowCol = color(255, 235, 100, alpha * 0.7 * animProgress); // Lighter gold glow
-
-    drawingContext.shadowBlur = glowAmount;
-    drawingContext.shadowColor = glowCol.toString();
-
-    fill(baseCol);
-    noStroke();
-    // Centered Trophy shape
-    let cupTopW = size;
-    let cupTopH = size * 0.15;
-    let cupBodyH = size * 0.5;
-    let stemH = size * 0.2;
-    let baseH = size * 0.15;
-    let baseW = size * 0.8;
-    let topY = y; // Align top of icon with text line roughly
-
-    rect(x + (size - baseW) / 2, topY + size - baseH, baseW, baseH); // Base
-    rect(x + (size - size * 0.2) / 2, topY + size - baseH - stemH, size * 0.2, stemH); // Stem
-    // Cup Body (simplified trapezoid using quad)
-    quad(
-        x + size * 0.15, topY + size - baseH - stemH,             // bottom left
-        x + size * 0.85, topY + size - baseH - stemH,             // bottom right
-        x + size,        topY + size - baseH - stemH - cupBodyH,  // top right
-        x,               topY + size - baseH - stemH - cupBodyH   // top left
-    );
-    ellipse(x + size / 2, topY + size - baseH - stemH - cupBodyH, cupTopW, cupTopH); // Rim
-
-    drawingContext.shadowBlur = 0;
-    pop();
-}
-
-
-// Updated Slider Icon (Bet)
-function drawSliderIcon(x, y, size, alpha, animProgress = 0) {
-     push();
-     let handleX = lerp(x + size * 0.1, x + size * 0.9, animProgress); // Animate handle position
-     stroke(180, 180, 180, alpha);
-     strokeWeight(max(1, size * 0.1));
-     line(x + size * 0.1, y + size / 2, x + size * 0.9, y + size / 2); // Track centered vertically
-     fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha);
-     noStroke();
-     ellipse(handleX, y + size / 2, size * 0.3, size * 0.3); // Handle centered vertically
-     pop();
-}
-
-// Updated Clock with color animation (Danger)
-function drawClockIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let angle = lerp(0, TWO_PI * 2, (frameCount * 0.01) % 1);
-    let handAnim = (sin(frameCount * 0.15) + 1) / 2;
-    let handColor = lerpColor(color(clockHandColor), color(255, 150, 150, alpha), handAnim);
-    let faceColor = color(200, 200, 220, alpha);
-    let glowColor = color(clockHandColor[0], clockHandColor[1], clockHandColor[2], alpha * 0.5 * handAnim);
-    let centerX = x + size / 2;
-    let centerY = y + size / 2; // Center the clock within its Y position
-
-    stroke(faceColor);
-    strokeWeight(max(1, size * 0.08));
-    noFill();
-    ellipse(centerX, centerY, size, size);
-
-    drawingContext.shadowBlur = max(2, 6 * currentScale) * handAnim;
-    drawingContext.shadowColor = glowColor.toString();
-    stroke(handColor);
-    strokeWeight(max(1.2, size * 0.1));
-    push();
-    translate(centerX, centerY);
-    // Minute Hand (Fast)
-    push(); rotate(angle); line(0, 0, 0, -size * 0.4); pop();
-    // Hour Hand (Slow)
-    push(); rotate(angle * 0.1); line(0, 0, 0, -size * 0.25); pop();
-    pop(); // Restore translate
-    drawingContext.shadowBlur = 0;
-    pop(); // Restore styles
-}
-
-// Updated Up Arrow Icon (Reward)
-function drawUpArrowIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let arrowColor = lerpColor(color(180, 255, 180, alpha), color(230, 255, 230, alpha), animProgress);
-    let arrowY = y + lerp(size * 0.1, -size * 0.1, animProgress); // Pulse Y position
-    let arrowHeadSize = size * 0.5;
-    let shaftWidth = size * 0.25;
-    let shaftHeight = size * 0.5;
-    let arrowTopY = arrowY + size * 0.1; // Top point of the arrowhead
-
-    fill(arrowColor);
-    noStroke();
-    // Shaft (position relative to bottom of arrowhead)
-    rect(x + (size - shaftWidth) / 2, arrowTopY + arrowHeadSize * 0.6, shaftWidth, shaftHeight);
-    // Head
-    triangle(
-        x + size / 2, arrowTopY,                       // Top point
-        x + size / 2 - arrowHeadSize / 2, arrowTopY + arrowHeadSize * 0.6, // Bottom left
-        x + size / 2 + arrowHeadSize / 2, arrowTopY + arrowHeadSize * 0.6  // Bottom right
-    );
-    pop();
-}
-
-// Updated Scoring Icon
-function drawScoringIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let elementSize = size * 0.35; // Slightly larger elements
-    let spacing = size * 0.05;
-    let totalWidth = elementSize * 3 + spacing * 2;
-    let startX = x + (size - totalWidth) / 2;
-    let symbolY = y + size * 0.25; // Y pos for symbols
-    let resultY = y + size * 0.7; // Y pos for results
-    let resultSize = size * 0.3;
-    let pulse = (sin(frameCount * 0.15 + PI / 2) + 1) / 2;
-    let fastPulse = (sin(frameCount * 0.25) + 1) / 2;
-
-
-    // Bet (Coin)
-    drawCoinIcon(startX, symbolY - elementSize/2, elementSize, alpha * 0.9, pulse);
-
-    // 'x' symbol
-    textAlign(CENTER, CENTER);
-    textSize(elementSize * 1.2);
-    fill(200, 200, 230, alpha);
-    text("×", startX + elementSize + spacing + elementSize / 2, symbolY + size*0.02); // Use multiplication symbol
-
-    // Multiplier (Star)
-    drawStarIcon(startX + elementSize * 2 + spacing * 2, symbolY - elementSize/2, elementSize, alpha * 0.9, pulse);
-
-    // Equals '='
-    // text("=", x + size / 2, resultY - size * 0.1);
-
-    // Result: Coin + Points (Star) - Animated slightly
-    drawCoinIcon(x + size / 2 - resultSize * 1.2 , resultY - resultSize/2, resultSize, alpha, fastPulse);
-    drawStarIcon(x + size / 2 + spacing, resultY - resultSize/2, resultSize, alpha, fastPulse);
-
-    pop();
-}
-
-// Updated Skull Icon (End)
-function drawSkullIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let mainColor = lerpColor(color(200, 200, 210, alpha), color(240, 240, 250, alpha), animProgress);
-    let shadowColor = color(80, 80, 90, alpha * 0.7);
-    let headW = size * 0.8;
-    let headH = size * 0.7;
-    let eyeSize = size * 0.18;
-    let jawH = size * 0.2;
-    let centerX = x + size / 2;
-    let topY = y + size * 0.1; // Position relative to top-left
-
-    fill(mainColor);
-    noStroke();
-    ellipse(centerX, topY + headH / 2, headW, headH); // Main skull shape
-
-    // Jaw area
-    rect(centerX - headW * 0.3, topY + headH * 0.8, headW * 0.6, jawH, size * 0.05); // Rounded jaw slightly
-
-    // Eyes
-    fill(shadowColor);
-    ellipse(centerX - headW * 0.25, topY + headH * 0.4, eyeSize, eyeSize * 1.2);
-    ellipse(centerX + headW * 0.25, topY + headH * 0.4, eyeSize, eyeSize * 1.2);
-
-    // Nose
-    triangle(
-        centerX, topY + headH * 0.55,
-        centerX - size * 0.08, topY + headH * 0.7,
-        centerX + size * 0.08, topY + headH * 0.7
-    );
-    pop();
-}
-
-// Updated Hourglass Icon (Race)
-function drawHourglassIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let sandColor = color(240, 230, 180, alpha);
-    let frameColor = color(150, 150, 180, alpha);
-    let frameWidth = size * 0.1;
-    let glassNeck = size * 0.15; // Narrower neck
-    let topY = y + frameWidth/2;
-    let bottomY = y + size - frameWidth/2;
-    let midY = y + size / 2;
-    let outerW = size;
-
-    // Frame
-    stroke(frameColor);
-    strokeWeight(frameWidth);
-    line(x + frameWidth/2, topY, x + outerW - frameWidth/2, topY); // Top bar
-    line(x + frameWidth/2, bottomY, x + outerW - frameWidth/2, bottomY); // Bottom bar
-    // Diagonal side frames for hourglass shape
-    line(x + frameWidth/2, topY, x + size/2 - glassNeck/2, midY); // Top-left to mid-left
-    line(x + size/2 - glassNeck/2, midY, x + frameWidth/2, bottomY); // Mid-left to bottom-left
-    line(x + outerW - frameWidth/2, topY, x + size/2 + glassNeck/2, midY); // Top-right to mid-right
-    line(x + size/2 + glassNeck/2, midY, x + outerW - frameWidth/2, bottomY); // Mid-right to bottom-right
-
-    // Sand animation
-    noStroke();
-    fill(sandColor);
-    let sandProgress = (sin(frameCount * 0.08) + 1) / 2; // Cyclic progress 0 -> 1 -> 0
-    let topSandHeight = lerp(size/2 - frameWidth, 0, sandProgress); // Top sand goes from full to empty
-    let bottomSandHeight = lerp(0, size/2 - frameWidth, sandProgress); // Bottom sand goes from empty to full
-
-    // Draw Top Sand (Trapezoid)
-    if (topSandHeight > 0.1) {
-        beginShape();
-        let topWidth = lerp(glassNeck, outerW - frameWidth*2, topSandHeight / (size/2 - frameWidth));
-        vertex(x + size/2 - topWidth/2, topY + frameWidth + (size/2 - frameWidth - topSandHeight)); // Top left corner of sand
-        vertex(x + size/2 + topWidth/2, topY + frameWidth + (size/2 - frameWidth - topSandHeight)); // Top right corner of sand
-        vertex(x + size/2 + glassNeck/2, midY); // Bottom right neck
-        vertex(x + size/2 - glassNeck/2, midY); // Bottom left neck
-        endShape(CLOSE);
-    }
-
-    // Draw Bottom Sand (Trapezoid)
-    if (bottomSandHeight > 0.1) {
-         beginShape();
-         let bottomWidth = lerp(glassNeck, outerW - frameWidth*2, bottomSandHeight / (size/2 - frameWidth));
-         vertex(x + size/2 - glassNeck/2, midY); // Top left neck
-         vertex(x + size/2 + glassNeck/2, midY); // Top right neck
-         vertex(x + size/2 + bottomWidth/2, midY + bottomSandHeight); // Bottom right corner of sand
-         vertex(x + size/2 - bottomWidth/2, midY + bottomSandHeight); // Bottom left corner of sand
-         endShape(CLOSE);
-    }
-    pop();
-}
-
-
-// Updated Question Mark Icon (Powerups) - Now used for header too
-function drawQuestionMarkIcon(x, y, size, alpha, animProgress = 0) {
-    push();
-    let mainColor = lerpColor(color(200, 200, 220, alpha), color(255, 255, 255, alpha), animProgress);
-    let glowColor = color(220, 220, 255, alpha * 0.6 * animProgress);
-    drawingContext.shadowBlur = max(2, 5 * currentScale) * animProgress;
-    drawingContext.shadowColor = glowColor.toString();
-    fill(mainColor);
-    textAlign(CENTER, CENTER);
-    textSize(size * 1.1); // Slightly smaller than before
-    textFont(titleFont); // Use Impact or similar bold font
-    text("?", x + size / 2, y + size / 2 + size * 0.08); // Adjust vertical centering
-    drawingContext.shadowBlur = 0;
-    pop();
-}
-
-
-// Updated Double Drop Icon
-function drawDoubleDropIcon(x, y, size, alpha, animProgress) {
-    push();
-    let ballSize = size * 0.55; // Slightly smaller balls
-    let spacing = size * 0.05;
-    let pulseAlpha = lerp(0.6, 1.0, animProgress);
-    let yOff = y + size * 0.2; // Align top
-    let xOff1 = x + size * 0.1;
-    let xOff2 = xOff1 + ballSize + spacing;
-
-    // Draw second ball first (pulsing alpha) slightly behind
-    fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha * pulseAlpha * 0.8); // More faded
-    ellipse(xOff2 + ballSize / 2, yOff + ballSize / 2, ballSize, ballSize);
-
-    // Draw first ball on top
-    fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha);
-    ellipse(xOff1 + ballSize / 2, yOff + ballSize / 2, ballSize, ballSize);
-
-    pop();
-}
-
-// Updated 2x Multiplier Icon
-function draw2xMultiplierIcon(x, y, size, alpha, animProgress) {
-     push();
-     let brightness = lerp(0.8, 1.5, animProgress);
-     let textColor = color(neonYellow[0] * brightness, neonYellow[1] * brightness, neonYellow[2] * brightness, alpha);
-     drawingContext.shadowBlur = max(2, 4 * currentScale) * animProgress;
-     drawingContext.shadowColor = color(neonYellow[0], neonYellow[1], 0, alpha * 0.5 * animProgress).toString();
-
-     fill(textColor);
-     textAlign(LEFT, TOP); // Align top-left
-     textSize(size * 1.0); // Adjusted size
-     textFont(titleFont);
-     text("2x", x + size*0.1, y + size * 0.1); // Adjusted position slightly
-     drawingContext.shadowBlur = 0;
-     pop();
-}
-
-
-// Updated Extra Ball icon (Ball + Plus)
-function drawExtraBallPlusIcon(x, y, size, alpha, animProgress) {
-    push();
-    let ballSize = size * 0.6; // Smaller ball
-    let plusSize = size * 0.4;
-    let plusWeight = size * 0.12; // Thicker plus
-    let ballX = x + size * 0.3; // Center ball more
-    let ballY = y + size / 2; // Center vertically
-    let plusX = x + size * 0.65; // Position plus relative to ball center
-    let plusY = y + size / 2;
-    let pulseScale = lerp(1.0, 1.2, animProgress);
-    let plusColor = lerpColor(color(bonusColor), color(255,255,255), animProgress); // Pulse plus color
-
-    // Ball
-    fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha * 0.9);
-    ellipse(ballX, ballY, ballSize, ballSize);
-
-    // Plus Sign
-    stroke(plusColor);
-    strokeWeight(plusWeight * pulseScale);
-    line(plusX - plusSize*pulseScale/2, plusY, plusX + plusSize*pulseScale/2, plusY); // Horizontal
-    line(plusX, plusY - plusSize*pulseScale/2, plusX, plusY + plusSize*pulseScale/2); // Vertical
-    pop();
-}
-
-// Existing Icons (ensure they accept animProgress, even if unused)
+// --- Icon Drawing Functions (Moved to global scope) ---
+function drawCoinIcon(x, y, size, alpha, animProgress = 0) { push(); let pulseScale = lerp(1.0, 1.1, animProgress); fill(255, 215, 0, alpha); noStroke(); ellipse(x + size / 2, y + size / 2, size * pulseScale, size * pulseScale); fill(200, 160, 0, alpha); ellipse(x + size / 2, y + size / 2, size * 0.6 * pulseScale, size * 0.6 * pulseScale); pop(); }
+function drawBallIcon(x, y, size, alpha, animProgress = 0) { push(); let pulseScale = lerp(1.0, 1.1, animProgress); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha); noStroke(); ellipse(x + size / 2, y + size / 2, size * pulseScale, size * pulseScale); pop(); }
+function drawLockIcon(x, y, size, alpha, animProgress = 0) { push(); let bodyH = size * 0.6; let bodyW = size * 0.7; let shackleThick = size * 0.15; let shackleDiam = size * 0.5; let pulseShift = lerp(0, size * 0.05, animProgress); fill(180, 180, 180, alpha); noStroke(); rect(x + (size - bodyW) / 2, y + size * 0.3 + pulseShift, bodyW, bodyH, size * 0.1); noFill(); stroke(220, 220, 220, alpha); strokeWeight(shackleThick); arc(x + size / 2, y + size * 0.3 + pulseShift, shackleDiam, shackleDiam, PI, TWO_PI); pop(); }
+function drawTrophyIcon(x, y, size, alpha, animProgress = 0) { push(); let glowAmount = lerp(0, NEON_GLOW_MAX_BLUR * 0.5 * currentScale, animProgress); let baseCol = color(255, 215, 0, alpha); let glowCol = color(255, 235, 100, alpha * 0.7 * animProgress); drawingContext.shadowBlur = glowAmount; drawingContext.shadowColor = glowCol.toString(); fill(baseCol); noStroke(); let cupTopW = size; let cupTopH = size * 0.15; let cupBodyH = size * 0.5; let stemH = size * 0.2; let baseH = size * 0.15; let baseW = size * 0.8; let topY = y; rect(x + (size - baseW) / 2, topY + size - baseH, baseW, baseH); rect(x + (size - size * 0.2) / 2, topY + size - baseH - stemH, size * 0.2, stemH); quad( x + size * 0.15, topY + size - baseH - stemH, x + size * 0.85, topY + size - baseH - stemH, x + size, topY + size - baseH - stemH - cupBodyH, x, topY + size - baseH - stemH - cupBodyH ); ellipse(x + size / 2, topY + size - baseH - stemH - cupBodyH, cupTopW, cupTopH); drawingContext.shadowBlur = 0; pop(); }
+function drawSliderIcon(x, y, size, alpha, animProgress = 0) { push(); let handleX = lerp(x + size * 0.1, x + size * 0.9, animProgress); stroke(180, 180, 180, alpha); strokeWeight(max(1, size * 0.1)); line(x + size * 0.1, y + size / 2, x + size * 0.9, y + size / 2); fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha); noStroke(); ellipse(handleX, y + size / 2, size * 0.3, size * 0.3); pop(); }
+function drawClockIcon(x, y, size, alpha, animProgress = 0) { push(); let angle = lerp(0, TWO_PI * 2, (frameCount * 0.01) % 1); let handAnim = (sin(frameCount * 0.15) + 1) / 2; let handColor = lerpColor(color(clockHandColor), color(255, 150, 150, alpha), handAnim); let faceColor = color(200, 200, 220, alpha); let glowColor = color(clockHandColor[0], clockHandColor[1], clockHandColor[2], alpha * 0.5 * handAnim); let centerX = x + size / 2; let centerY = y + size / 2; stroke(faceColor); strokeWeight(max(1, size * 0.08)); noFill(); ellipse(centerX, centerY, size, size); drawingContext.shadowBlur = max(2, 6 * currentScale) * handAnim; drawingContext.shadowColor = glowColor.toString(); stroke(handColor); strokeWeight(max(1.2, size * 0.1)); push(); translate(centerX, centerY); push(); rotate(angle); line(0, 0, 0, -size * 0.4); pop(); push(); rotate(angle * 0.1); line(0, 0, 0, -size * 0.25); pop(); pop(); drawingContext.shadowBlur = 0; pop(); }
+function drawUpArrowIcon(x, y, size, alpha, animProgress = 0) { push(); let arrowColor = lerpColor(color(180, 255, 180, alpha), color(230, 255, 230, alpha), animProgress); let arrowY = y + lerp(size * 0.1, -size * 0.1, animProgress); let arrowHeadSize = size * 0.5; let shaftWidth = size * 0.25; let shaftHeight = size * 0.5; let arrowTopY = arrowY + size * 0.1; fill(arrowColor); noStroke(); rect(x + (size - shaftWidth) / 2, arrowTopY + arrowHeadSize * 0.6, shaftWidth, shaftHeight); triangle( x + size / 2, arrowTopY, x + size / 2 - arrowHeadSize / 2, arrowTopY + arrowHeadSize * 0.6, x + size / 2 + arrowHeadSize / 2, arrowTopY + arrowHeadSize * 0.6 ); pop(); }
+function drawScoringIcon(x, y, size, alpha, animProgress = 0) { push(); let elementSize = size * 0.35; let spacing = size * 0.05; let totalWidth = elementSize * 3 + spacing * 2; let startX = x + (size - totalWidth) / 2; let symbolY = y + size * 0.25; let resultY = y + size * 0.7; let resultSize = size * 0.3; let pulse = (sin(frameCount * 0.15 + PI / 2) + 1) / 2; let fastPulse = (sin(frameCount * 0.25) + 1) / 2; drawCoinIcon(startX, symbolY - elementSize/2, elementSize, alpha * 0.9, pulse); textAlign(CENTER, CENTER); textSize(elementSize * 1.2); fill(200, 200, 230, alpha); text("×", startX + elementSize + spacing + elementSize / 2, symbolY + size*0.02); drawStarIcon(startX + elementSize * 2 + spacing * 2, symbolY - elementSize/2, elementSize, alpha * 0.9, pulse); drawCoinIcon(x + size / 2 - resultSize * 1.2 , resultY - resultSize/2, resultSize, alpha, fastPulse); drawStarIcon(x + size / 2 + spacing, resultY - resultSize/2, resultSize, alpha, fastPulse); pop(); }
+function drawSkullIcon(x, y, size, alpha, animProgress = 0) { push(); let mainColor = lerpColor(color(200, 200, 210, alpha), color(240, 240, 250, alpha), animProgress); let shadowColor = color(80, 80, 90, alpha * 0.7); let headW = size * 0.8; let headH = size * 0.7; let eyeSize = size * 0.18; let jawH = size * 0.2; let centerX = x + size / 2; let topY = y + size * 0.1; fill(mainColor); noStroke(); ellipse(centerX, topY + headH / 2, headW, headH); rect(centerX - headW * 0.3, topY + headH * 0.8, headW * 0.6, jawH, size * 0.05); fill(shadowColor); ellipse(centerX - headW * 0.25, topY + headH * 0.4, eyeSize, eyeSize * 1.2); ellipse(centerX + headW * 0.25, topY + headH * 0.4, eyeSize, eyeSize * 1.2); triangle( centerX, topY + headH * 0.55, centerX - size * 0.08, topY + headH * 0.7, centerX + size * 0.08, topY + headH * 0.7 ); pop(); }
+function drawHourglassIcon(x, y, size, alpha, animProgress = 0) { push(); let sandColor = color(240, 230, 180, alpha); let frameColor = color(150, 150, 180, alpha); let frameWidth = size * 0.1; let glassNeck = size * 0.15; let topY = y + frameWidth/2; let bottomY = y + size - frameWidth/2; let midY = y + size / 2; let outerW = size; stroke(frameColor); strokeWeight(frameWidth); line(x + frameWidth/2, topY, x + outerW - frameWidth/2, topY); line(x + frameWidth/2, bottomY, x + outerW - frameWidth/2, bottomY); line(x + frameWidth/2, topY, x + size/2 - glassNeck/2, midY); line(x + size/2 - glassNeck/2, midY, x + frameWidth/2, bottomY); line(x + outerW - frameWidth/2, topY, x + size/2 + glassNeck/2, midY); line(x + size/2 + glassNeck/2, midY, x + outerW - frameWidth/2, bottomY); noStroke(); fill(sandColor); let sandProgress = (sin(frameCount * 0.08) + 1) / 2; let topSandHeight = lerp(size/2 - frameWidth, 0, sandProgress); let bottomSandHeight = lerp(0, size/2 - frameWidth, sandProgress); if (topSandHeight > 0.1) { beginShape(); let topWidth = lerp(glassNeck, outerW - frameWidth*2, topSandHeight / (size/2 - frameWidth)); vertex(x + size/2 - topWidth/2, topY + frameWidth + (size/2 - frameWidth - topSandHeight)); vertex(x + size/2 + topWidth/2, topY + frameWidth + (size/2 - frameWidth - topSandHeight)); vertex(x + size/2 + glassNeck/2, midY); vertex(x + size/2 - glassNeck/2, midY); endShape(CLOSE); } if (bottomSandHeight > 0.1) { beginShape(); let bottomWidth = lerp(glassNeck, outerW - frameWidth*2, bottomSandHeight / (size/2 - frameWidth)); vertex(x + size/2 - glassNeck/2, midY); vertex(x + size/2 + glassNeck/2, midY); vertex(x + size/2 + bottomWidth/2, midY + bottomSandHeight); vertex(x + size/2 - bottomWidth/2, midY + bottomSandHeight); endShape(CLOSE); } pop(); }
+function drawQuestionMarkIcon(x, y, size, alpha, animProgress = 0) { push(); let mainColor = lerpColor(color(200, 200, 220, alpha), color(255, 255, 255, alpha), animProgress); let glowColor = color(220, 220, 255, alpha * 0.6 * animProgress); drawingContext.shadowBlur = max(2, 5 * currentScale) * animProgress; drawingContext.shadowColor = glowColor.toString(); fill(mainColor); textAlign(CENTER, CENTER); textSize(size * 1.1); textFont(titleFont); text("?", x + size / 2, y + size / 2 + size * 0.08); drawingContext.shadowBlur = 0; pop(); }
+function drawDoubleDropIcon(x, y, size, alpha, animProgress) { push(); let ballSize = size * 0.55; let spacing = size * 0.05; let pulseAlpha = lerp(0.6, 1.0, animProgress); let yOff = y + size * 0.2; let xOff1 = x + size * 0.1; let xOff2 = xOff1 + ballSize + spacing; fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha * pulseAlpha * 0.8); ellipse(xOff2 + ballSize / 2, yOff + ballSize / 2, ballSize, ballSize); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha); ellipse(xOff1 + ballSize / 2, yOff + ballSize / 2, ballSize, ballSize); pop(); }
+function draw2xMultiplierIcon(x, y, size, alpha, animProgress) { push(); let brightness = lerp(0.8, 1.5, animProgress); let textColor = color(neonYellow[0] * brightness, neonYellow[1] * brightness, neonYellow[2] * brightness, alpha); drawingContext.shadowBlur = max(2, 4 * currentScale) * animProgress; drawingContext.shadowColor = color(neonYellow[0], neonYellow[1], 0, alpha * 0.5 * animProgress).toString(); fill(textColor); textAlign(LEFT, TOP); textSize(size * 1.0); textFont(titleFont); text("2x", x + size*0.1, y + size * 0.1); drawingContext.shadowBlur = 0; pop(); }
+function drawExtraBallPlusIcon(x, y, size, alpha, animProgress) { push(); let ballSize = size * 0.6; let plusSize = size * 0.4; let plusWeight = size * 0.12; let ballX = x + size * 0.3; let ballY = y + size / 2; let plusX = x + size * 0.65; let plusY = y + size / 2; let pulseScale = lerp(1.0, 1.2, animProgress); let plusColor = lerpColor(color(bonusColor), color(255,255,255), animProgress); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha * 0.9); ellipse(ballX, ballY, ballSize, ballSize); stroke(plusColor); strokeWeight(plusWeight * pulseScale); line(plusX - plusSize*pulseScale/2, plusY, plusX + plusSize*pulseScale/2, plusY); line(plusX, plusY - plusSize*pulseScale/2, plusX, plusY + plusSize*pulseScale/2); pop(); }
 function drawStarIcon(x, y, size, alpha, animProgress = 0) { push(); let scaleFactor = lerp(0.9, 1.1, animProgress); fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha); noStroke(); let angle = TWO_PI / 5; let halfAngle = angle / 2.0; beginShape(); let radius1 = size/2 * scaleFactor; let radius2 = size/4 * scaleFactor; for (let a = -PI/2; a < TWO_PI - PI/2; a += angle) { let sx = x + size/2 + cos(a) * radius1; let sy = y + size/2 + sin(a) * radius1; vertex(sx, sy); sx = x + size/2 + cos(a + halfAngle) * radius2; sy = y + size/2 + sin(a + halfAngle) * radius2; vertex(sx, sy); } endShape(CLOSE); pop(); }
 function drawCrossedIcon(x, y, size, alpha, animProgress = 0, drawBaseIconFunc = null) { push(); if (drawBaseIconFunc) { drawBaseIconFunc(x, y, size, alpha * 0.7, animProgress); } let crossAlpha = lerp(0.5, 1.0, animProgress); stroke(trueRed[0], trueRed[1], trueRed[2], alpha * crossAlpha); strokeWeight(max(1.5, size * 0.15)); line(x + size * 0.1, y + size * 0.1, x + size * 0.9, y + size * 0.9); line(x + size * 0.1, y + size * 0.9, x + size * 0.9, y + size * 0.1); pop(); }
-
-// Existing Corner Animations (ensure they accept necessary params)
 function drawBallCountAnimation(x, y, size, alpha) { push(); let countSpeed = 0.15; let currentBallNum = highScoreBallsTotal - floor((frameCount * countSpeed) % (highScoreBallsTotal + 1)); textAlign(RIGHT, TOP); textSize(size * 0.9); fill(200, 200, 230, alpha); let numStr = str(currentBallNum); text(numStr, x, y); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha * 0.8); noStroke(); ellipse(x - textWidth(numStr) - size*0.3 , y + size * 0.4, size*0.5); pop(); }
-// Renamed old gold drain to survival corner animation
 function drawSurvivalCornerAnimation(x, y, w, h, alpha) { push(); let numCoins = 3; let coinSize = h * 0.6; let fallDist = h * 1.5; let loopTime = 2.0; for (let i = 0; i < numCoins; i++) { let timeOffset = (i / numCoins) * loopTime; let currentLoopTime = (millis() / 1000 + timeOffset) % loopTime; let progress = currentLoopTime / loopTime; let currentY = y + lerp(-coinSize, fallDist, progress * progress); let currentAlpha = alpha * sin(progress * PI); if (currentAlpha > 0 && currentY < y + h + coinSize) { let currentX = x + w / 2 - coinSize / 2 + sin(progress * PI * 3) * w * 0.1; drawCoinIcon(currentX, currentY, coinSize, currentAlpha, 0); } } pop(); }
 
-// --- Updated drawHoverDescription (Handles bottom padding better, deeper sub-indent) ---
-function drawHoverDescription(button, description, animProgress, slideDirection = 'TOP', mode = null) {
-    if (!button || animProgress <= 0) return;
+// --- Updated: Hover Leaderboard Drawing Function ---
+function drawHoverLeaderboard(mode, animProgress, data, loading, error) {
+    if (!launchMenuDiv || animProgress <= 0) return;
 
     push();
 
     // --- Config ---
+    const scaledPadding = HOVER_LEADERBOARD_BASE_PADDING * currentScale;
+    const scaledBoxWidth = HOVER_LEADERBOARD_BASE_WIDTH * currentScale;
+    const scaledTitleSize = max(10, HOVER_LEADERBOARD_TITLE_SIZE_BASE * currentScale);
+    const scaledTextSize = max(7, HOVER_LEADERBOARD_TEXT_SIZE_BASE * currentScale);
+    const scaledEntrySpacing = HOVER_LEADERBOARD_ENTRY_SPACING_BASE * currentScale;
+    const entryLineHeight = scaledTextSize + scaledEntrySpacing;
+    const titleAreaHeight = scaledTitleSize + scaledPadding * 1.5; // Space for title + padding below
+
+    const scaledOffsetX = HOVER_LEADERBOARD_OFFSET_X * currentScale;
+    const targetBgAlpha = 240;
+    const targetBorderAlpha = 200;
+    const targetTextAlpha = 255;
+    const scaledSlideMargin = SLIDE_OFFSCREEN_MARGIN * currentScale;
+
+    // --- Calculate Height ---
+    let entriesToShow = HOVER_LEADERBOARD_MAX_ENTRIES; // Use the constant (now 10)
+    let contentHeight = 0;
+    if (loading || error) {
+        contentHeight = entryLineHeight * 2; // Estimate space for loading/error message
+    } else if (data) {
+        contentHeight = entryLineHeight * min(data.length, entriesToShow);
+        if (data.length == 0) {
+           contentHeight = entryLineHeight; // Space for "Empty" message
+        }
+    } else {
+        contentHeight = entryLineHeight; // Space for potential message
+    }
+    const boxHeight = titleAreaHeight + contentHeight + scaledPadding; // Total height
+
+    // --- Positioning & Animation ---
+    const menuRect = getLaunchMenuCanvasRect();
+    if (!menuRect) { pop(); return; } // Exit if menu position is not available
+
+    // Calculate target position (Right of menu, vertically centered)
+    let targetBoxX = menuRect.x + menuRect.width + scaledOffsetX;
+    let targetBoxY = menuRect.y + menuRect.height / 2 - boxHeight / 2;
+
+    // Clamp target Y to stay within canvas bounds (with padding)
+    targetBoxY = constrain(targetBoxY, scaledPadding, scaledCanvasHeight - boxHeight - scaledPadding);
+    // Clamp target X
+    targetBoxX = min(targetBoxX, scaledCanvasWidth - scaledBoxWidth - scaledPadding);
+    targetBoxX = max(targetBoxX, scaledPadding); // Ensure it doesn't go off left
+
+    // Calculate animation based on mode (VERTICAL slides)
+    const easedProgress = 1 - pow(1 - animProgress, 3); // Ease out cubic
+    let startBoxY;
+    let currentBoxX = targetBoxX; // X position is fixed at target
+    let currentBoxY;
+
+    if (mode === 'survival') { // Slide UP from BOTTOM
+        startBoxY = scaledCanvasHeight + scaledSlideMargin;
+        currentBoxY = lerp(startBoxY, targetBoxY, easedProgress);
+    } else { // High Score: Slide DOWN from TOP
+        startBoxY = -boxHeight - scaledSlideMargin;
+        currentBoxY = lerp(startBoxY, targetBoxY, easedProgress);
+    }
+
+    // Apply alpha fade-in based on progress
+    let finalBgAlpha = targetBgAlpha * easedProgress;
+    let finalBorderAlpha = targetBorderAlpha * easedProgress;
+    let finalTextAlpha = targetTextAlpha * easedProgress;
+
+    // --- Drawing Box ---
+    fill(HOVER_LEADERBOARD_BG_COLOR[0], HOVER_LEADERBOARD_BG_COLOR[1], HOVER_LEADERBOARD_BG_COLOR[2], finalBgAlpha);
+    stroke(HOVER_LEADERBOARD_BORDER_COLOR[0], HOVER_LEADERBOARD_BORDER_COLOR[1], HOVER_LEADERBOARD_BORDER_COLOR[2], finalBorderAlpha);
+    strokeWeight(max(1, 1.5 * currentScale));
+    rect(currentBoxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale); // Use current animated Y
+
+    // --- Drawing Title ---
+    fill(HOVER_LEADERBOARD_TEXT_COLOR[0], HOVER_LEADERBOARD_TEXT_COLOR[1], HOVER_LEADERBOARD_TEXT_COLOR[2], finalTextAlpha);
+    textFont(uiFont);
+    textSize(scaledTitleSize);
+    textAlign(CENTER, TOP);
+    let titleText = mode === 'survival' ? "Survival Leaders" : "High Score Leaders";
+    text(titleText, currentBoxX + scaledBoxWidth / 2, currentBoxY + scaledPadding);
+
+    // --- Drawing Content (with noSmooth for sharpness) ---
+    push(); // Isolate noSmooth setting
+    noSmooth(); // Attempt to make text sharper
+
+    let currentTextYDraw = currentBoxY + titleAreaHeight; // Y position for drawing text lines
+    let textStartX = currentBoxX + scaledPadding;
+    let textWidthAvailable = scaledBoxWidth - 2 * scaledPadding;
+
+    textSize(scaledTextSize);
+    textAlign(LEFT, TOP);
+    textStyle(NORMAL); // Ensure normal style unless overridden
+
+    // Column widths (approximate based on max expected content)
+    const maxRankStr = `${entriesToShow}.`; // Use the correct max number
+    const maxNameStr = "WWWWWWWWWW"; // 10 chars
+    const maxScoreStr = "9,999,999"; // Example score format
+    const rankColWidth = textWidth(maxRankStr) + 5 * currentScale;
+    const nameColWidth = textWidth(maxNameStr) + 10 * currentScale;
+    const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale;
+    const totalWidthEst = rankColWidth + nameColWidth + scoreColWidth;
+    // Adjust spacing dynamically if needed, or use fixed positions
+    const rankX = textStartX;
+    const nameX = rankX + rankColWidth; // Simple fixed spacing might be clearer
+    const scoreAlignRightX = currentBoxX + scaledBoxWidth - scaledPadding; // Align score to the right edge
+
+    if (loading) {
+        fill(180, 180, 200, finalTextAlpha);
+        textAlign(CENTER, TOP);
+        text("Loading...", currentBoxX + scaledBoxWidth / 2, currentTextYDraw);
+    } else if (error) {
+        fill(softRed[0], softRed[1], softRed[2], finalTextAlpha);
+        textAlign(CENTER, TOP);
+        text(`Error`, currentBoxX + scaledBoxWidth / 2, currentTextYDraw);
+        text(`loading`, currentBoxX + scaledBoxWidth / 2, currentTextYDraw + entryLineHeight);
+
+    } else if (data && data.length > 0) {
+        for (let i = 0; i < min(data.length, entriesToShow); i++) {
+            let entry = data[i];
+            let rank = i + 1;
+            let nameStr = (entry.player_name || 'ANON').toUpperCase().substring(0, 10);
+            let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A';
+            let rankStr = `${rank}.`;
+
+            let entryColor = color(HOVER_LEADERBOARD_TEXT_COLOR[0], HOVER_LEADERBOARD_TEXT_COLOR[1], HOVER_LEADERBOARD_TEXT_COLOR[2], finalTextAlpha);
+            let applyBold = false;
+            if (i === 0) { entryColor = color(HOVER_LEADERBOARD_GOLD_COLOR_LIGHT[0], HOVER_LEADERBOARD_GOLD_COLOR_LIGHT[1], HOVER_LEADERBOARD_GOLD_COLOR_LIGHT[2], finalTextAlpha); applyBold = true; }
+            else if (i === 1) { entryColor = color(HOVER_LEADERBOARD_GOLD_COLOR_MEDIUM[0], HOVER_LEADERBOARD_GOLD_COLOR_MEDIUM[1], HOVER_LEADERBOARD_GOLD_COLOR_MEDIUM[2], finalTextAlpha); applyBold = true; }
+            else if (i === 2) { entryColor = color(HOVER_LEADERBOARD_GOLD_COLOR_STRONG[0], HOVER_LEADERBOARD_GOLD_COLOR_STRONG[1], HOVER_LEADERBOARD_GOLD_COLOR_STRONG[2], finalTextAlpha); applyBold = true; }
+
+            if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); }
+            fill(entryColor);
+
+            // Draw Rank
+            textAlign(LEFT, TOP);
+            text(rankStr, rankX, currentTextYDraw);
+
+            // Draw Name
+            textAlign(LEFT, TOP);
+            text(nameStr, nameX, currentTextYDraw);
+
+            // Draw Score (Aligned Right)
+            textAlign(RIGHT, TOP);
+            text(scoreStr, scoreAlignRightX, currentTextYDraw);
+
+            currentTextYDraw += entryLineHeight;
+        }
+        textStyle(NORMAL); // Reset text style
+    } else if (data) { // Data received, but empty
+        fill(180, 180, 200, finalTextAlpha);
+        textAlign(CENTER, TOP);
+        text("Leaderboard Empty", currentBoxX + scaledBoxWidth / 2, currentTextYDraw);
+    } else { // No data yet (should be covered by loading/error)
+        fill(150, 150, 160, finalTextAlpha);
+        textAlign(CENTER, TOP);
+        text("No data", currentBoxX + scaledBoxWidth / 2, currentTextYDraw);
+    }
+
+    smooth(); // Restore default smoothing
+    pop(); // Restore drawing settings
+
+    pop(); // Restore transform/style state for the whole function
+}
+
+
+// --- Updated: drawHoverDescription ---
+function drawHoverDescription(button, description, animProgress, slideDirection = 'TOP', mode = null) {
+    if (!button || animProgress <= 0) return;
+    push();
+
+    // --- Config (Mostly unchanged) ---
     const scaledPadding = HOVER_BOX_BASE_PADDING * currentScale;
     const scaledBoxWidth = HOVER_BOX_BASE_WIDTH * currentScale;
     const scaledTextSize = max(8, HOVER_BOX_BASE_TEXT_SIZE * currentScale);
-    const lineHeight = scaledTextSize * 1.5; // Consistent line height
+    const lineHeight = scaledTextSize * 1.5;
     const scaledIconSize = HOVER_ANIM_ICON_BASE_SIZE * currentScale;
     const scaledIconSpacing = HOVER_ANIM_SPACING * currentScale;
     const iconAreaWidth = scaledIconSize + scaledIconSpacing;
-    const scaledSubBulletExtraIndent = HOVER_SUB_BULLET_EXTRA_INDENT * currentScale; // Scaled extra indent
-
+    const scaledSubBulletExtraIndent = HOVER_SUB_BULLET_EXTRA_INDENT * currentScale;
     const scaledOffsetX = HOVER_BOX_OFFSET_X * currentScale;
     const scaledMaxGlow = NEON_GLOW_MAX_BLUR * currentScale;
     const targetBgAlpha = 240;
@@ -1217,187 +1027,75 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
     const targetTextAlpha = 255;
     const scaledSlideMargin = SLIDE_OFFSCREEN_MARGIN * currentScale;
 
-    // --- Text Wrapping & Keyword Extraction ---
-    textFont(uiFont);
-    textSize(scaledTextSize);
-    textAlign(LEFT, TOP);
-    let originalLines = description.split('\n');
-    let lineObjects = [];
-    let currentTextY = scaledPadding;
-    let isInsideBulletParagraph = false;
-    let currentBulletIndentOffset = 0;
+    // --- Text Wrapping & Height Calculation (Unchanged) ---
+    textFont(uiFont); textSize(scaledTextSize); textAlign(LEFT, TOP); let originalLines = description.split('\n'); let lineObjects = []; let currentTextY = scaledPadding; let isInsideBulletParagraph = false; let currentBulletIndentOffset = 0; for (let lineIndex = 0; lineIndex < originalLines.length; lineIndex++) { let line = originalLines[lineIndex].trim(); let isEmpty = line === ''; let keywords = []; let isPowerupBulletLine = line.startsWith('Double Drop:') || line.startsWith('2x Multiplier:') || line.startsWith('Extra Ball:'); let isPowerupHeaderLine = line.includes('Power Ups Chances :'); let startsBullet = line.startsWith('Goal:') || line.startsWith('Start:') || line.startsWith('Bet:') || line.startsWith('Reward:') || line.startsWith('Scoring:') || line.startsWith('Danger:') || line.startsWith('End:') || line.startsWith('Race') || line.startsWith('Purity:') || isPowerupHeaderLine || isPowerupBulletLine || line.startsWith('Survival Mode:') || line.startsWith('High Score Mode:'); if (isEmpty) { lineObjects.push({ text: '', y: currentTextY, contains: [], isBulletStart: false, isPowerupBullet: false, isPowerupHeader: false, indent: false, bulletIndentOffset: 0 }); currentTextY += lineHeight * 0.5; isInsideBulletParagraph = false; currentBulletIndentOffset = 0; continue; } if (startsBullet) { isInsideBulletParagraph = true; currentBulletIndentOffset = isPowerupBulletLine ? scaledSubBulletExtraIndent : 0; if (line.includes('Goal:')) keywords.push('Goal'); if (line.includes('Start:')) keywords.push('Start'); if (line.includes('Bet:')) keywords.push('Bet'); if (line.includes('"bet slider"')) keywords.push('bet slider'); if (line.includes('Reward:')) keywords.push('Reward'); if (line.includes('Scoring:')) keywords.push('Scoring'); if (line.includes('Danger:')) keywords.push('Danger'); if (line.includes('End:')) keywords.push('End'); if (line.includes('Race')) keywords.push('Race'); if (line.includes('Purity:')) keywords.push('Purity'); if (isPowerupHeaderLine) keywords.push('Power-ups'); if (isPowerupBulletLine && line.includes('Double Drop')) keywords.push('Double Drop'); if (isPowerupBulletLine && line.includes('2x Multiplier')) keywords.push('2x Multiplier'); if (isPowerupBulletLine && line.includes('Extra Ball')) keywords.push('Extra Ball'); } else { if (!isInsideBulletParagraph) { currentBulletIndentOffset = 0; } } let words = line.split(' '); if (words.length === 0 || (words.length === 1 && words[0] === '')) { lineObjects.push({ text: '', y: currentTextY, contains: keywords, isBulletStart: startsBullet, isPowerupBullet: isPowerupBulletLine, isPowerupHeader: isPowerupHeaderLine, indent: false, bulletIndentOffset: currentBulletIndentOffset }); currentTextY += lineHeight; continue; } let hasIconSpace = startsBullet && !line.startsWith('Survival Mode:') && !line.startsWith('High Score Mode:'); let availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (hasIconSpace ? iconAreaWidth : 0); let currentLineText = words[0]; let isFirstLineOfThisChunk = true; for (let i = 1; i < words.length; i++) { let testLine = currentLineText + ' ' + words[i]; let testWidth = textWidth(testLine); if (testWidth > availableWidth && currentLineText !== "") { let originalLineHadIcon = isFirstLineOfThisChunk && hasIconSpace; lineObjects.push({ text: currentLineText, y: currentTextY, contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [], isBulletStart: originalLineHadIcon, isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine, isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine, indent: true, bulletIndentOffset: currentBulletIndentOffset }); currentTextY += lineHeight; currentLineText = words[i]; isFirstLineOfThisChunk = false; availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (isInsideBulletParagraph ? iconAreaWidth : 0); } else { currentLineText = testLine; } } let originalLineHadIconLast = isFirstLineOfThisChunk && hasIconSpace; lineObjects.push({ text: currentLineText, y: currentTextY, contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [], isBulletStart: originalLineHadIconLast, isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine, isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine, indent: !isFirstLineOfThisChunk, bulletIndentOffset: currentBulletIndentOffset }); currentTextY += lineHeight; }
+    const boxHeight = currentTextY - lineHeight + scaledPadding * 2;
 
-    for (let lineIndex = 0; lineIndex < originalLines.length; lineIndex++) {
-        let line = originalLines[lineIndex].trim();
-        let isEmpty = line === '';
-        let keywords = [];
-        let isPowerupBulletLine = line.startsWith('Double Drop:') || line.startsWith('2x Multiplier:') || line.startsWith('Extra Ball:');
-        let isPowerupHeaderLine = line.includes('Power Ups Chances :');
-        let startsBullet = line.startsWith('Goal:') || line.startsWith('Start:') || line.startsWith('Bet:') ||
-                           line.startsWith('Reward:') || line.startsWith('Scoring:') || line.startsWith('Danger:') ||
-                           line.startsWith('End:') || line.startsWith('Race') || line.startsWith('Purity:') ||
-                           isPowerupHeaderLine || isPowerupBulletLine || line.startsWith('Survival Mode:') || line.startsWith('High Score Mode:');
+    // --- Positioning & Animation ---
+    const buttonPos = button.position(); const buttonSize = button.size(); const canvasOffsetX = (windowWidth - scaledCanvasWidth) / 2;
 
-        if (isEmpty) {
-             lineObjects.push({ text: '', y: currentTextY, contains: [], isBulletStart: false, isPowerupBullet: false, isPowerupHeader: false, indent: false, bulletIndentOffset: 0 });
-             currentTextY += lineHeight * 0.5;
-             isInsideBulletParagraph = false;
-             currentBulletIndentOffset = 0;
-             continue;
-        }
+    // Calculate X position (Always left of the menu)
+    let targetBoxX = buttonPos.x - canvasOffsetX - scaledBoxWidth - scaledOffsetX;
+    targetBoxX = max(scaledPadding, targetBoxX); // Clamp left
+    targetBoxX = min(targetBoxX, scaledCanvasWidth - scaledBoxWidth - scaledPadding); // Clamp right (less likely needed now)
+    let currentBoxX = targetBoxX; // X doesn't animate for vertical slides
 
-        if (startsBullet) {
-            isInsideBulletParagraph = true;
-            currentBulletIndentOffset = isPowerupBulletLine ? scaledSubBulletExtraIndent : 0; // Apply deeper indent
-
-            if (line.includes('Goal:')) keywords.push('Goal');
-            if (line.includes('Start:')) keywords.push('Start');
-            if (line.includes('Bet:')) keywords.push('Bet');
-            if (line.includes('"bet slider"')) keywords.push('bet slider');
-            if (line.includes('Reward:')) keywords.push('Reward');
-            if (line.includes('Scoring:')) keywords.push('Scoring');
-            if (line.includes('Danger:')) keywords.push('Danger');
-            if (line.includes('End:')) keywords.push('End');
-            if (line.includes('Race')) keywords.push('Race');
-            if (line.includes('Purity:')) keywords.push('Purity');
-            if (isPowerupHeaderLine) keywords.push('Power-ups');
-            if (isPowerupBulletLine && line.includes('Double Drop')) keywords.push('Double Drop');
-            if (isPowerupBulletLine && line.includes('2x Multiplier')) keywords.push('2x Multiplier');
-            if (isPowerupBulletLine && line.includes('Extra Ball')) keywords.push('Extra Ball');
-        } else {
-            if (!isInsideBulletParagraph) {
-                 currentBulletIndentOffset = 0;
-             }
-        }
-
-        let words = line.split(' ');
-        if (words.length === 0 || (words.length === 1 && words[0] === '')) {
-             lineObjects.push({ text: '', y: currentTextY, contains: keywords, isBulletStart: startsBullet, isPowerupBullet: isPowerupBulletLine, isPowerupHeader: isPowerupHeaderLine, indent: false, bulletIndentOffset: currentBulletIndentOffset });
-             currentTextY += lineHeight;
-             continue;
-        }
-
-        let hasIconSpace = startsBullet && !line.startsWith('Survival Mode:') && !line.startsWith('High Score Mode:');
-
-        let availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (hasIconSpace ? iconAreaWidth : 0);
-        let currentLineText = words[0];
-        let isFirstLineOfThisChunk = true;
-
-        for (let i = 1; i < words.length; i++) {
-            let testLine = currentLineText + ' ' + words[i];
-            let testWidth = textWidth(testLine);
-
-            if (testWidth > availableWidth && currentLineText !== "") {
-                 let originalLineHadIcon = isFirstLineOfThisChunk && hasIconSpace;
-                lineObjects.push({
-                    text: currentLineText,
-                    y: currentTextY,
-                    contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [],
-                    isBulletStart: originalLineHadIcon,
-                    isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine,
-                    isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine,
-                    indent: true,
-                    bulletIndentOffset: currentBulletIndentOffset
-                });
-                currentTextY += lineHeight;
-                currentLineText = words[i];
-                isFirstLineOfThisChunk = false;
-                availableWidth = scaledBoxWidth - 2 * scaledPadding - currentBulletIndentOffset - (isInsideBulletParagraph ? iconAreaWidth : 0);
-
-            } else {
-                currentLineText = testLine;
-            }
-        }
-        let originalLineHadIconLast = isFirstLineOfThisChunk && hasIconSpace;
-        lineObjects.push({
-            text: currentLineText,
-            y: currentTextY,
-            contains: (isFirstLineOfThisChunk && startsBullet) ? keywords : [],
-            isBulletStart: originalLineHadIconLast,
-            isPowerupBullet: isFirstLineOfThisChunk && isPowerupBulletLine,
-            isPowerupHeader: isFirstLineOfThisChunk && isPowerupHeaderLine,
-            indent: !isFirstLineOfThisChunk,
-            bulletIndentOffset: currentBulletIndentOffset
-        });
-        currentTextY += lineHeight;
-    }
-
-    // Calculate final box height including INCREASED bottom padding
-    const boxHeight = currentTextY - lineHeight + scaledPadding * 2; // Match top padding for bottom padding
-
-
-    // --- Positioning & Animation (Center Vertically) ---
-    const buttonPos = button.position();
-    const buttonSize = button.size();
-    const canvasOffsetX = (windowWidth - scaledCanvasWidth) / 2;
-
-    // Calculate X
-    let boxX = buttonPos.x - canvasOffsetX + buttonSize.width + scaledOffsetX;
-    if (boxX + scaledBoxWidth > scaledCanvasWidth - scaledPadding) {
-        boxX = buttonPos.x - canvasOffsetX - scaledBoxWidth - scaledOffsetX;
-    }
-    boxX = max(scaledPadding, boxX);
-    boxX = min(boxX, scaledCanvasWidth - scaledBoxWidth - scaledPadding);
-
-    // Calculate target Y for centering
+    // Calculate target Y (Centered vertically)
     let idealTargetBoxY = scaledCanvasHeight / 2 - boxHeight / 2;
-    let clampedTargetBoxY = constrain(idealTargetBoxY, scaledPadding, scaledCanvasHeight - boxHeight - scaledPadding);
+    let targetBoxY = constrain(idealTargetBoxY, scaledPadding, scaledCanvasHeight - boxHeight - scaledPadding);
 
-    // Determine starting Y for slide animation
+    // Calculate starting Y based on slideDirection
     let startBoxY;
-    if (slideDirection === 'TOP') {
+    if (slideDirection === 'TOP') { // Survival Mode Desc
         startBoxY = -boxHeight - scaledSlideMargin;
-    } else {
+    } else { // High Score Mode Desc (slideDirection === 'BOTTOM')
         startBoxY = scaledCanvasHeight + scaledSlideMargin;
     }
-     if (slideDirection === 'TOP' && clampedTargetBoxY > scaledCanvasHeight / 2) {
-          startBoxY = scaledCanvasHeight + scaledSlideMargin;
-     } else if (slideDirection === 'BOTTOM' && clampedTargetBoxY < scaledCanvasHeight / 2) {
-          startBoxY = -boxHeight - scaledSlideMargin;
-     }
 
-
+    // Eased animation for Y position
     const easedProgress = 1 - pow(1 - animProgress, 3);
-    let currentBoxY = lerp(startBoxY, clampedTargetBoxY, easedProgress);
+    let currentBoxY = lerp(startBoxY, targetBoxY, easedProgress);
 
+    // Calculate alpha and glow
     let finalBgAlpha = targetBgAlpha * easedProgress;
     let finalBorderAlpha = targetBorderAlpha * easedProgress;
     let finalTextAlpha = targetTextAlpha * easedProgress;
     let finalGlowAmount = scaledMaxGlow * easedProgress;
 
-    // --- Drawing ---
+    // --- Drawing Box ---
     fill(HOVER_BOX_BG_COLOR[0], HOVER_BOX_BG_COLOR[1], HOVER_BOX_BG_COLOR[2], finalBgAlpha);
     stroke(HOVER_BOX_BORDER_COLOR[0], HOVER_BOX_BORDER_COLOR[1], HOVER_BOX_BORDER_COLOR[2], finalBorderAlpha);
     strokeWeight(max(1, 1.5 * currentScale));
-    rect(boxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale);
+    rect(currentBoxX, currentBoxY, scaledBoxWidth, boxHeight, 4 * currentScale); // Use current X and Y
 
-    noStroke();
+    // --- Drawing Content (Icons, Text, Highlights) ---
+    push(); // Isolate noSmooth setting
+    noSmooth(); // Try for sharper text
+
+    noStroke(); // Reset stroke for text/icons
     drawingContext.shadowBlur = finalGlowAmount;
     let glowColor = color(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], (NEON_GLOW_COLOR_ALPHA / 255) * finalTextAlpha);
     drawingContext.shadowColor = glowColor.toString();
 
-    // Animation values
     let pulseAnim = (sin(frameCount * 0.1) + 1) / 2;
     let fastPulseAnim = (sin(frameCount * 0.2) + 1) / 2;
     let betSliderHighlightColor = lerpColor( color(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha), color(neonYellow[0], neonYellow[1], neonYellow[2], finalTextAlpha), fastPulseAnim * 0.8 );
 
-    // --- Draw lines, icons, and highlights ---
     for (let lineData of lineObjects) {
-        if (lineData.text === '' && !lineData.isBulletStart && !lineData.isPowerupHeader) continue; // Skip rendering completely empty lines unless they are placeholder for spacing or headers
-
-        let lineY = currentBoxY + lineData.y;
-        let lineBaseX = boxX + scaledPadding + lineData.bulletIndentOffset;
+        if (lineData.text === '' && !lineData.isBulletStart && !lineData.isPowerupHeader) continue;
+        let lineYDraw = currentBoxY + lineData.y; // Use animated Y for drawing position
+        let lineBaseXDraw = currentBoxX + scaledPadding + lineData.bulletIndentOffset; // Use fixed X for drawing position
         let lineText = lineData.text;
         let textDrawX;
-
-        let textDrawY = lineY + (lineHeight - scaledTextSize) * 0.3;
+        let textDrawY = lineYDraw + (lineHeight - scaledTextSize) * 0.3;
 
         if (lineData.isBulletStart || lineData.isPowerupHeader) {
-            let iconX = lineBaseX;
-            let iconY = lineY;
+            let iconX = lineBaseXDraw;
+            let iconY = lineYDraw; // Use animated Y
             textDrawX = iconX + iconAreaWidth;
             let iconDrawn = false;
 
+            // Icon drawing logic (unchanged, uses global functions now)
             if (mode === 'SURVIVAL') {
                 if (lineData.contains.includes('Goal')) { drawTrophyIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Start')) { drawCoinIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
@@ -1420,20 +1118,16 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
             }
 
             if (!iconDrawn) {
-                textDrawX = lineBaseX; // No icon drawn, text starts at base X
+                textDrawX = lineBaseXDraw; // No icon drawn, text starts at base X
             }
-
         } else if (lineData.indent) {
-            // Wrapped line: Align with text start of its bullet point
-            textDrawX = lineBaseX + iconAreaWidth;
+            textDrawX = lineBaseXDraw + iconAreaWidth; // Wrapped line alignment
         } else {
-            // Normal line, no icon, no indent
-            textDrawX = boxX + scaledPadding;
+            textDrawX = currentBoxX + scaledPadding; // Normal line
         }
 
         // --- Draw Text ---
         fill(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha);
-
         if (mode === 'SURVIVAL' && lineData.contains.includes('bet slider')) {
             let keyword = '"bet slider"';
             let startIndex = lineText.indexOf(keyword);
@@ -1452,29 +1146,45 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
         } else { text(lineText, textDrawX, textDrawY); }
     }
 
-    // --- Draw Mode-Specific Corner Animations ---
+    // --- Draw Corner Animations (Unchanged) ---
      let cornerAnimSize = scaledIconSize * 1.8;
-     let cornerAnimX = boxX + scaledBoxWidth - scaledPadding - cornerAnimSize;
-     let cornerAnimY = currentBoxY + scaledPadding;
+     let cornerAnimX = currentBoxX + scaledBoxWidth - scaledPadding - cornerAnimSize;
+     let cornerAnimY = currentBoxY + scaledPadding; // Use animated Y
      let cornerAnimH = scaledIconSize * 1.5;
-
-    if (mode === 'HIGHSCORE') {
-        drawBallCountAnimation(cornerAnimX + cornerAnimSize, cornerAnimY, cornerAnimSize, finalTextAlpha);
-    } else if (mode === 'SURVIVAL') {
-        drawSurvivalCornerAnimation(cornerAnimX, cornerAnimY, cornerAnimSize, cornerAnimH * 1.5, finalTextAlpha);
-    }
+    if (mode === 'HIGHSCORE') { drawBallCountAnimation(cornerAnimX + cornerAnimSize, cornerAnimY, cornerAnimSize, finalTextAlpha); }
+    else if (mode === 'SURVIVAL') { drawSurvivalCornerAnimation(cornerAnimX, cornerAnimY, cornerAnimSize, cornerAnimH * 1.5, finalTextAlpha); }
 
     drawingContext.shadowBlur = 0; // Reset shadow
-    pop();
+    smooth(); // Restore default smoothing
+    pop(); // Restore drawing settings (noSmooth)
+    pop(); // Restore transform/style state for the whole function
 }
 
+
+// ... (Other drawing functions: drawPegs, drawBalls, etc. - unchanged) ...
+function drawPegs() { push(); const scaledPegRadius = basePegRadius * currentScale; const glowSize = scaledPegRadius * basePegGlowSizeIncrease; const scaledBaseShadowBlur = basePegShadowBlur * currentScale; noStroke(); for (let peg of pegs) { if (!Composite.get(world, peg.id, 'body')) continue; let currentRadius = scaledPegRadius; let currentShadowColor = 'rgba(180, 220, 255, 0.5)'; let currentShadowBlur = scaledBaseShadowBlur; let baseColor = color(255, 255, 255, 230); if (peg.plugin?.glowTimer > 0) { let glowProgress = map(peg.plugin.glowTimer, pegGlowDuration, 0, 1, 0); currentRadius = lerp(scaledPegRadius, glowSize, glowProgress); fill(255, 255, 255, lerp(230, 255, glowProgress)); currentShadowBlur = lerp(scaledBaseShadowBlur, max(10, 20 * currentScale), glowProgress); currentShadowColor = `rgba(255, 255, 255, ${lerp(0.5, 0.9, glowProgress)})`; peg.plugin.glowTimer--; } else { fill(baseColor); } drawingContext.shadowBlur = currentShadowBlur; drawingContext.shadowColor = currentShadowColor; ellipse(peg.position.x, peg.position.y, currentRadius * 2); drawingContext.shadowBlur = 0; } drawingContext.shadowBlur = 0; pop(); }
+function drawBalls() { push(); const scaledBallRadius = currentBallRadius * currentScale; for (let i = balls.length - 1; i >= 0; i--) { let ball = balls[i]; if (!Composite.get(world, ball.id, 'body')) { console.warn(`Ball body ${ball.id} not found in world, removing from drawing array.`); balls.splice(i, 1); continue; } if (showTrails && ball.plugin?.path?.length > 1) { push(); noFill(); let ballColor = color(neonBlue[0], neonBlue[1], neonBlue[2]); let transparentColor = color(neonBlue[0], neonBlue[1], neonBlue[2], 0); for (let j = 1; j < ball.plugin.path.length; j++) { let segmentRatio = (j - 1) / (ball.plugin.path.length - 2 || 1); let currentAlpha = lerp(trailEndAlpha, trailStartAlpha, segmentRatio); let currentWeight = lerp(trailEndWeightFactor, trailStartWeightFactor, segmentRatio); currentWeight *= scaledBallRadius * 2; currentWeight = max(1, currentWeight); stroke(ballColor.levels[0], ballColor.levels[1], ballColor.levels[2], currentAlpha); strokeWeight(currentWeight); strokeCap(ROUND); line(ball.plugin.path[j - 1].x, ball.plugin.path[j - 1].y, ball.plugin.path[j].x, ball.plugin.path[j].y); } pop(); } let ballDrawColor = neonBlue; let glowColor = 'rgba(100, 220, 255, 0.7)'; push(); translate(ball.position.x, ball.position.y); rotate(ball.angle); fill(ballDrawColor[0], ballDrawColor[1], ballDrawColor[2]); noStroke(); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = glowColor; ellipse(0, 0, scaledBallRadius * 2); drawingContext.shadowBlur = 0; pop(); if (ball.position.y > scaledCanvasHeight + scaledBallRadius * 5 || ball.position.x < -scaledBallRadius * 5 || ball.position.x > gameAreaWidth + scaledBallRadius * 5) { if (DEBUG_MODE) console.log(`Removing off-screen ball ${ball.id}`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } balls.splice(i, 1); } } pop(); }
+function drawFunnels() { push(); if (!slotStartY || !dividers || dividers.length < numSlots + 1) { pop(); return; } const funnelTopActualY = slotStartY - 5 * currentScale; const scaledSlotHeight = baseSlotHeight * currentScale; stroke(funnelColor[0], funnelColor[1], funnelColor[2], funnelColor[3]); strokeWeight(max(1, 1.5 * currentScale)); for (let i = 1; i < dividers.length - 1; i++) { if (!dividers[i] || !dividers[i].position) continue; line(dividers[i].position.x, funnelTopActualY, dividers[i].position.x, slotStartY + scaledSlotHeight); } pop(); }
+function drawMultiplierPanel() { push(); const panelX = multiplierPanelX; const panelY = multiplierPanelY; const panelW = multiplierPanelWidth; const panelH = multiplierPanelHeight; const itemH = multiplierPanelItemHeight; const itemS = multiplierPanelItemSpacing; const borderRadius = multiplierPanelBorderRadius; const txtSize = multiplierPanelTextSize; let hasVisibleHits = false; for (let i = 0; i < recentHits.length; i++) { let hit = recentHits[i]; let age = frameCount - hit.timestamp; if (age <= multiplierDisplayDuration) { hasVisibleHits = true; break; } } if (!hasVisibleHits) { for (let i = recentHits.length - 1; i >= 0; i--) { if (frameCount - recentHits[i].timestamp > multiplierDisplayDuration) { recentHits.splice(i, 1); } } pop(); return; } let currentY = panelY + itemS; const panelBottomBoundary = panelY + panelH - itemS; let maxItemsToShow = floor((panelH - itemS * 2) / (itemH + itemS)); maxItemsToShow = max(0, maxItemsToShow); let startIndex = max(0, recentHits.length - maxItemsToShow); for (let i = recentHits.length - 1; i >= startIndex; i--) { let hit = recentHits[i]; let age = frameCount - hit.timestamp; if (age > multiplierDisplayDuration) continue; let fadeProgress = age / multiplierDisplayDuration; let alpha = 255 * (1 - fadeProgress * fadeProgress); alpha = constrain(alpha, 0, 255); if (alpha > 5) { if (currentY + itemH > panelBottomBoundary) { break; } fill(multiplierDisplayOrange[0], multiplierDisplayOrange[1], multiplierDisplayOrange[2], alpha * 0.9); noStroke(); rect(panelX + itemS, currentY, panelW - 2 * itemS, itemH, borderRadius * 0.7); fill(255, 255, 255, alpha); textFont(uiFont); textSize(txtSize); textAlign(CENTER, CENTER); let multValue = hit.value; let decimals = (abs(multValue) < 1 && multValue !== 0) ? 1 : 0; let multText = nf(multValue, 0, decimals) + 'x'; text(multText, panelX + panelW / 2, currentY + itemH / 2 + (1 * currentScale)); currentY += (itemH + itemS); } } for (let i = recentHits.length - 1; i >= 0; i--) { if (frameCount - recentHits[i].timestamp > multiplierDisplayDuration) { recentHits.splice(i, 1); } } pop(); }
+function drawPowerupTimer() { push(); if (!isDoubleDropActive && !isDoubleMultiplierActive) { pop(); return; } let maxTimeFrames = 0; if (isDoubleDropActive) maxTimeFrames = max(maxTimeFrames, doubleDropTimer); if (isDoubleMultiplierActive) maxTimeFrames = max(maxTimeFrames, doubleMultiplierTimer); let secondsLeft = ceil(maxTimeFrames / 60.0); if (secondsLeft <= 0) { pop(); return; } let powerupLabel = ""; if (isDoubleDropActive && isDoubleMultiplierActive) { powerupLabel = (doubleDropTimer > doubleMultiplierTimer) ? "Double Drop" : "2x Multiplier"; } else if (isDoubleDropActive) { powerupLabel = "Double Drop"; } else if (isDoubleMultiplierActive) { powerupLabel = "2x Multiplier"; } let timerText = `${powerupLabel}: ${secondsLeft}s`; let displayX = powerupTimerDisplayX; let displayY = powerupTimerDisplayY; let flickerColor = random(powerupTimerFlickerColors); textFont(uiFont); textSize(timerTextSize); textAlign(LEFT, TOP); let glowAmount = max(4, 12 * currentScale); drawingContext.shadowBlur = glowAmount; drawingContext.shadowColor = `rgba(${flickerColor[0]}, ${flickerColor[1]}, ${flickerColor[2]}, 0.7)`; fill(flickerColor); noStroke(); text(timerText, displayX, displayY); drawingContext.shadowBlur = 0; pop(); }
+function drawSlots() { push(); const scaledSlotTextSize = slotTextSize; const scaledSlotHeight = baseSlotHeight * currentScale; let scaledBounceAmplitude = bounceAmplitude; textFont(slotFont); if (!dividers || dividers.length !== numSlots + 1) { pop(); return; } if (typeof slotStartY === 'undefined') { pop(); return; } for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1] || !dividers[i].position || !dividers[i+1].position) { continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let currentSlotWidth = dividerRightX - dividerLeftX; if (currentSlotWidth <= 0) { currentSlotWidth = 1; } let slotX = slotCenterX - currentSlotWidth / 2; let slotY = slotStartY; let bounceOffsetY = 0; if (slotBounceState[i] > 0) { let bounceProgress = map(slotBounceState[i], bounceDuration, 0, 0, PI); bounceOffsetY = scaledBounceAmplitude * sin(bounceProgress); slotBounceState[i]--; } let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(25 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let slotColor; if (colorFactor < 0.5) { slotColor = lerpColor(color(255, 255, 0), color(255, 165, 0), map(colorFactor, 0, 0.5, 0, 1)); } else { slotColor = lerpColor(color(255, 165, 0), color(200, 0, 0), map(colorFactor, 0.5, 1, 0, 1)); } fill(slotColor); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); if (slotGlowState[i] > 0) { let glowProgress = map(slotGlowState[i], slotGlowDuration, 0, 1, 0); let glowAlpha = map(pow(glowProgress, 0.5), 1, 0, slotGlowMaxAlpha, 0); fill(slotGlowColor[0], slotGlowColor[1], slotGlowColor[2], glowAlpha); noStroke(); rect(slotX, slotY - bounceOffsetY, currentSlotWidth, scaledSlotHeight); slotGlowState[i]--; } let brightnessValue = (red(slotColor) * 299 + green(slotColor) * 587 + blue(slotColor) * 114) / 1000; let textColor = brightnessValue > 125 ? color(0) : color(255); fill(textColor); textAlign(CENTER, CENTER); let currentMultiplier = baseMultiplier; if (currentGameMode === 'SURVIVAL' && isDoubleMultiplierActive) { currentMultiplier *= 2; } let multiplierText = nf(currentMultiplier, 0, (currentMultiplier < 1 && currentMultiplier !== 0) ? 1 : 0) + 'x'; let textY = (slotY + scaledSlotHeight / 2) - bounceOffsetY; textSize(scaledSlotTextSize); text(multiplierText, slotCenterX, textY); } pop(); }
+function drawTitle() { push(); textFont(titleFont); textSize(titleSize); textAlign(CENTER, TOP); let titleText = "DROP"; let x = gameAreaWidth / 2; let y = titleY; let offset = titleSize * 0.03; fill(titleColorShadow[0], titleColorShadow[1], titleColorShadow[2], 180); text(titleText, x + offset, y + offset); let grad = drawingContext.createLinearGradient(x - titleSize, y, x + titleSize, y + titleSize); grad.addColorStop(0, `rgb(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]})`); grad.addColorStop(0.5, `rgb(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]})`); grad.addColorStop(1, `rgb(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]})`); drawingContext.fillStyle = grad; text(titleText, x, y); fill(titleColorHighlight[0], titleColorHighlight[1], titleColorHighlight[2], 100); text(titleText, x - offset * 0.5, y - offset * 0.5); pop(); }
+function drawLaunchTitle(alpha) { if (alpha <= 0) return; push(); let launchTitleSize = titleSize * 2.0; textFont(titleFont); textSize(launchTitleSize); textAlign(CENTER, CENTER); let titleText = "DROP"; let x = scaledCanvasWidth / 2; let y = scaledCanvasHeight * 0.3; let baseOffset = launchTitleSize * 0.035; let numLayers = 5; let liquidSpeed = 0.03; let liquidShiftAmount = launchTitleSize * 0.1; let highlightShift = sin(frameCount * liquidSpeed) * liquidShiftAmount; for (let i = numLayers; i >= 1; i--) { let layerOffset = baseOffset * i; let layerAlphaMultiplier = pow((numLayers - i) / numLayers, 1.5); let shadowIntensity = map(i, 1, numLayers, 0.5, 0.9); fill( titleColorShadow[0] * shadowIntensity, titleColorShadow[1] * shadowIntensity, titleColorShadow[2] * shadowIntensity, 190 * layerAlphaMultiplier * (alpha / 255) ); text(titleText, x + layerOffset, y + layerOffset); } let grad = drawingContext.createLinearGradient( x - launchTitleSize * 0.6 + highlightShift, y - launchTitleSize * 0.4, x + launchTitleSize * 0.6 + highlightShift, y + launchTitleSize * 0.4 ); let hRGBA = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.9 * alpha / 255})`; let bRGBA = `rgba(${titleColorBase[0]}, ${titleColorBase[1]}, ${titleColorBase[2]}, ${1.0 * alpha / 255})`; let mSR = lerp(titleColorShadow[0], titleColorBase[0], 0.4); let mSG = lerp(titleColorShadow[1], titleColorBase[1], 0.4); let mSB = lerp(titleColorShadow[2], titleColorBase[2], 0.4); let mSRGBA = `rgba(${mSR}, ${mSG}, ${mSB}, ${1.0 * alpha / 255})`; let sRGBA = `rgba(${titleColorShadow[0]}, ${titleColorShadow[1]}, ${titleColorShadow[2]}, ${0.8 * alpha / 255})`; grad.addColorStop(0, hRGBA); grad.addColorStop(0.4, bRGBA); grad.addColorStop(0.8, mSRGBA); grad.addColorStop(1, sRGBA); drawingContext.fillStyle = grad; text(titleText, x, y); let glowBlur = max(5, 25 * currentScale) * (alpha / 255); let glowColor = `rgba(${titleColorHighlight[0]}, ${titleColorHighlight[1]}, ${titleColorHighlight[2]}, ${0.5 * (alpha / 255)})`; drawingContext.shadowBlur = glowBlur; drawingContext.shadowColor = glowColor; drawingContext.fillStyle = grad; text(titleText, x, y); drawingContext.shadowBlur = 0; drawingContext.shadowColor = 'rgba(0,0,0,0)'; pop(); }
+function drawEnhancedUIText(txt, x, y, size, fillColor = color(230), align = LEFT) { push(); textFont(uiFont); textSize(size); textAlign(align, TOP); fill(uiTextOutlineColor[0], uiTextOutlineColor[1], uiTextOutlineColor[2], uiTextOutlineColor[3]); let outlineOffset = max(1, 1.5 * currentScale); text(txt, x + outlineOffset, y + outlineOffset); drawingContext.shadowBlur = 0; fill(fillColor); text(txt, x, y); pop(); }
+function drawGameUI() { push(); textFont(uiFont); fill(230, 230, 240, 220); textAlign(LEFT, TOP); let textX = uiSideMargin; let goldTextY = scoreY; let scoreColor = color(230, 230, 240, 220); if (currentGameMode === 'SURVIVAL' && goldLossFlashActive) { let flashProgress = (goldLossFlashEndFrame - frameCount) / pointsLossFlashDurationFrames; let flashSin = sin(flashProgress * PI); scoreColor = lerpColor(color(230, 230, 240, 220), color(brightRed[0], brightRed[1], brightRed[2]), flashSin); } let goldText = `Gold: ${floor(score)}`; drawEnhancedUIText(goldText, textX, goldTextY, uiScoreTextSize, scoreColor, LEFT); let rightSideTopY = scoreY - uiScoreTextSize - (3 * currentScale); let rightSideBottomY = scoreY; if (currentGameMode === 'HIGHSCORE') { let highScorePointsText = `Total points earned: ${highScorePoints}`; drawEnhancedUIText(highScorePointsText, gameAreaWidth - uiSideMargin, rightSideTopY, uiScoreTextSize, color(230), RIGHT); let ballsLeftText = `Balls Left: ${ballsRemaining}`; drawEnhancedUIText(ballsLeftText, gameAreaWidth - uiSideMargin, rightSideBottomY, uiScoreTextSize, color(230), RIGHT); } else if (currentGameMode === 'SURVIVAL') { let survivalPointsText = `Total Points Earned: ${sessionScore}`; drawEnhancedUIText(survivalPointsText, gameAreaWidth - uiSideMargin, rightSideBottomY, uiScoreTextSize, color(230), RIGHT); } if (currentGameMode === 'SURVIVAL') { let decayTextY = goldTextY + uiScoreTextSize + (5 * currentScale); let decayInfoText = ""; let showLossText = true; let now = millis(); let timeToNext = nextDecayTime - now; let secsToNext = ceil(max(0, timeToNext) / 1000); let percent = (currentDecayPercent * 100).toFixed(0); decayInfoText = `Gold Loss: ${percent}% (Next: ${secsToNext}s)`; if (isGoldLossCountdownActive || goldLossMessageActive) { showLossText = false; } if (showLossText && nextDecayTime !== Infinity) { let decayTextSize = uiScoreTextSize * 0.85; let decayTextColor = color(200, 200, 200, 220); drawEnhancedUIText(decayInfoText, uiSideMargin, decayTextY, decayTextSize, decayTextColor, LEFT); } } let dropBtnX = uiSideMargin; let dropBtnY = dropButtonY; let dropBtnW = buttonWidth; let dropBtnH = buttonHeight; let dropButtonTextSize = max(7, baseButtonTextSize * currentScale * 1.3); let canDrop = false; let dropLabel = ""; if (currentGameMode === 'SURVIVAL') { let totalDropCost = betAmount; canDrop = (score >= totalDropCost); dropLabel = `Drop (Cost: ${totalDropCost})`; } else if (currentGameMode === 'HIGHSCORE') { canDrop = (ballsRemaining > 0); dropLabel = `Drop Ball (${ballsRemaining} left)`; } drawNeonButton( dropLabel, dropBtnX, dropBtnY, dropBtnW, dropBtnH, neonBlue, 0, uiFont, dropButtonTextSize, canDrop && gameState === 'PLAYING' ); pop(); }
+function drawGameOverOverlay() { push(); fill(0, 0, 0, 190); rect(0, 0, gameAreaWidth, scaledCanvasHeight); textFont(titleFont); textAlign(CENTER, CENTER); if (gameOverState === 'SHOWING_FORM') { let message = ""; let messageSize = max(26, 52 * currentScale); let messageY = scaledCanvasHeight * 0.35; let messageColor = color(220, 220, 220); if (currentGameMode === 'SURVIVAL') { message = "Game Over"; messageColor = color(trueRed[0], trueRed[1], trueRed[2]); let sessionScoreY = messageY + messageSize * 0.7; let sessionScoreSize = messageSize * 0.6; textSize(sessionScoreSize); fill(220, 220, 180); drawingContext.shadowBlur = max(4, 12 * currentScale); drawingContext.shadowColor = 'rgba(220, 220, 180, 0.6)'; text(`Total Points: ${sessionScore}`, gameAreaWidth / 2, sessionScoreY); drawingContext.shadowBlur = 0; } else if (currentGameMode === 'HIGHSCORE') { message = `TOTAL POINTS: ${highScorePoints}`; messageColor = color(neonGreen[0], neonGreen[1], neonGreen[2]); } textSize(messageSize); drawingContext.shadowBlur = max(8, 18 * currentScale); drawingContext.shadowColor = messageColor.toString(); fill(messageColor); text(message, gameAreaWidth / 2, messageY); drawingContext.shadowBlur = 0; const form = document.getElementById('leaderboard-form'); if (form && form.style.display !== 'none') { positionLeaderboardForm(form); } } else if (gameOverState === 'SHOWING_LEADERBOARD') { let titleY = leaderboardYOffset; textSize(leaderboardTitleSize); fill(220, 200, 255); drawingContext.shadowBlur = max(5, 15 * currentScale); drawingContext.shadowColor = 'rgba(220, 200, 255, 0.5)'; text("Leaderboard", gameAreaWidth / 2, titleY); drawingContext.shadowBlur = 0; drawLeaderboard(); let btnW = buttonWidth * gameOverButtonWidthScale; let btnH = buttonHeight * gameOverButtonHeightScale; let btnX = gameAreaWidth / 2 - btnW / 2; let spacing = gameOverButtonSpacing * currentScale; let btnFontSize = max(10, baseButtonTextSize * currentScale * 1.6); let menuBtnY = scaledCanvasHeight - spacing * 1.5 - btnH; let restartBtnY = menuBtnY - spacing - btnH; drawNeonButton("Restart", btnX, restartBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); drawNeonButton("Menu", btnX, menuBtnY, btnW, btnH, gameOverButtonColor, 0, uiFont, btnFontSize); } pop(); }
+function drawLeaderboard() { push(); textFont(uiFont); textSize(leaderboardTextSize); textAlign(LEFT, TOP); let startY = leaderboardYOffset + leaderboardTitleSize + 20 * currentScale; let lineH = (leaderboardTextSize + leaderboardEntrySpacing) * 1.3; const maxRankStr = "10."; const maxNameStr = "WWWWWWWWWW"; const maxScoreStr = "9,999,999"; const rankColWidth = textWidth(maxRankStr) + 5 * currentScale; const nameColWidth = textWidth(maxNameStr) + 15 * currentScale; const scoreColWidth = textWidth(maxScoreStr) + 5 * currentScale; const totalContentWidth = rankColWidth + nameColWidth + scoreColWidth; const leaderboardCenterX = gameAreaWidth / 2; const blockStartX = leaderboardCenterX - totalContentWidth / 2; const rankColumnX = blockStartX; const nameColumnX = rankColumnX + rankColWidth; const scoreColumnAlignX = nameColumnX + nameColWidth + scoreColWidth; const strongGold = color(255, 190, 0); const mediumGold = color(255, 215, 0); const lightGold = color(255, 235, 100); const defaultColor = color(210, 210, 230); if (leaderboardLoading) { textAlign(CENTER, TOP); fill(200); textStyle(NORMAL); text("Loading Leaderboard...", leaderboardCenterX, startY); } else if (leaderboardError) { textAlign(CENTER, TOP); fill(softRed[0], softRed[1], softRed[2]); textStyle(NORMAL); text(`Error: ${leaderboardError}`, leaderboardCenterX, startY); text("Could not load leaderboard.", leaderboardCenterX, startY + lineH); } else if (leaderboardData && leaderboardData.length > 0) { let bottomButtonAreaY = scaledCanvasHeight - (buttonHeight * gameOverButtonHeightScale * 2 + gameOverButtonSpacing * currentScale * 3); let availableHeight = bottomButtonAreaY - startY; let maxVisibleEntries = floor(availableHeight / lineH); maxVisibleEntries = max(0, maxVisibleEntries); for (let i = 0; i < min(leaderboardData.length, maxVisibleEntries); i++) { let entry = leaderboardData[i]; let rank = i + 1; let nameStr = (entry.player_name || 'ANONYMOUS').toUpperCase().substring(0, 10); let scoreStr = (typeof entry.score === 'number') ? entry.score.toLocaleString() : 'N/A'; let rankStr = `${rank}.`; let entryColor = defaultColor; let applyBold = false; if (i === 0) { entryColor = lightGold; applyBold = true; } else if (i === 1) { entryColor = mediumGold; applyBold = true; } else if (i === 2) { entryColor = strongGold; applyBold = true; } if (applyBold) { textStyle(BOLD); } else { textStyle(NORMAL); } fill(entryColor); let currentY = startY + i * lineH; textAlign(LEFT, TOP); text(rankStr, rankColumnX, currentY); textAlign(LEFT, TOP); text(nameStr, nameColumnX, currentY); textAlign(RIGHT, TOP); text(scoreStr, scoreColumnAlignX, currentY); } textStyle(NORMAL); if (leaderboardData.length > maxVisibleEntries) { fill(180); textAlign(CENTER, TOP); text("...", leaderboardCenterX, startY + maxVisibleEntries * lineH); } } else if (leaderboardData) { fill(180); textAlign(CENTER, TOP); textStyle(NORMAL); text("Leaderboard is empty.", leaderboardCenterX, startY); } else { fill(150); textAlign(CENTER, TOP); textStyle(NORMAL); text("No leaderboard data.", leaderboardCenterX, startY); } pop(); }
+function drawNeonButton(label, x, y, w, h, baseColor, cost = 0, font = uiFont, fontSize = 15, enabled = true) { push(); noStroke(); translate(x, y); let cornerRadius = h * 0.3; let gradColorLight, gradColorDark, glowColor, textColor; let isDisabled = !enabled; if (isDisabled) { gradColorLight = color(80, 80, 90, 200); gradColorDark = color(50, 50, 60, 200); glowColor = color(0, 0, 0, 0); textColor = color(140, 140, 150); } else { gradColorLight = color(baseColor[0], baseColor[1], baseColor[2], 255); gradColorDark = color(baseColor[0] * 0.6, baseColor[1] * 0.6, baseColor[2] * 0.6, 255); glowColor = color(baseColor[0], baseColor[1], baseColor[2], 180); textColor = color(255); } if (enabled) { drawingContext.shadowBlur = max(6, 22 * currentScale); drawingContext.shadowColor = glowColor.toString(); } else { drawingContext.shadowBlur = 0; } let grad = drawingContext.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, gradColorLight.toString()); grad.addColorStop(1, gradColorDark.toString()); drawingContext.fillStyle = grad; rect(0, 0, w, h, cornerRadius); drawingContext.shadowBlur = 0; fill(textColor); textFont(font); textSize(fontSize); textAlign(CENTER, CENTER); text(label, w / 2, h / 2 + max(1, 1.5 * currentScale)); pop(); }
+function drawSlider(slider) { if (!slider) return; push(); let sliderXRelative = slider.x; let trackY = slider.y + 25 * currentScale; let scaledFontSize = max(8, 12 * currentScale); let isDisabled = slider.enabled !== undefined && !slider.enabled; let labelColor = isDisabled ? color(120) : color(220); let trackColor = isDisabled ? color(80) : color(120); let handleColor = isDisabled ? color(100) : neonYellow; let handleGlow = isDisabled ? 'rgba(100, 100, 100, 0)' : 'rgba(255, 255, 0, 0.7)'; let valueColor = isDisabled ? color(120) : color(220); fill(labelColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, BOTTOM); text(slider.label, sliderXRelative + sliderWidth / 2, trackY - 6 * currentScale); stroke(trackColor); strokeWeight(max(2, 4 * currentScale)); line(sliderXRelative, trackY, sliderXRelative + sliderWidth, trackY); let handleXRelative = map(slider.value, slider.minVal, slider.maxVal, sliderXRelative, sliderXRelative + sliderWidth); handleXRelative = constrain(handleXRelative, sliderXRelative, sliderXRelative + sliderWidth); noStroke(); fill(handleColor); if (!isDisabled) { drawingContext.shadowBlur = max(4, 10 * currentScale); drawingContext.shadowColor = handleGlow; } ellipse(handleXRelative, trackY, sliderHandleSize, sliderHandleSize); drawingContext.shadowBlur = 0; fill(valueColor); textFont(uiFont); textSize(scaledFontSize); textAlign(CENTER, TOP); let valueText = ""; if (slider === musicVolumeSlider) { valueText = floor(slider.value); } else if (slider === speedSlider) { valueText = slider.value.toFixed(1) + 'x'; } else if (slider === sfxVolumeSlider) { valueText = slider.value.toFixed(2); } else { valueText = floor(slider.value); } text(valueText, sliderXRelative + sliderWidth / 2, trackY + 8 * currentScale); pop(); }
+function drawStatisticsBars() { push(); const chartHeightMax = max(40, 80 * currentScale); const chartWidth = max(90, 180 * currentScale); const chartX = gameAreaWidth - chartWidth - max(5, 10 * currentScale); const chartY = max(40, 80 * currentScale); let maxHitCount = 0; for (let count of slotHitCounts) { if (count > maxHitCount) { maxHitCount = count; } } if (maxHitCount === 0) { stroke(100); strokeWeight(max(1, 1 * currentScale)); line(chartX, chartY + chartHeightMax, chartX + chartWidth, chartY + chartHeightMax); noStroke(); pop(); return; } const barWidth = chartWidth / numSlots; translate(chartX, chartY); for (let i = 0; i < numSlots; i++) { let count = slotHitCounts[i]; let barH = map(count, 0, maxHitCount, 0, chartHeightMax); let barX = i * barWidth; let baseMultiplier = slotMultipliers[i]; let colorFactor = map(Math.log10(baseMultiplier + 0.1), Math.log10(0.2 + 0.1), Math.log10(25 + 0.1), 0, 1); colorFactor = constrain(colorFactor, 0, 1); let barColor = colorFactor < 0.5 ? lerpColor(color(255, 255, 0, 200), color(255, 165, 0, 200), map(colorFactor, 0, 0.5, 0, 1)) : lerpColor(color(255, 165, 0, 200), color(200, 0, 0, 200), map(colorFactor, 0.5, 1, 0, 1)); let currentBarColor = barColor; if (histogramBarPulseState[i] > 0) { let pulseProgress = map(histogramBarPulseState[i], histogramPulseDuration, 0, 1, 0); let pulseBrightness = lerp(1.0, 1.8, pulseProgress * pulseProgress); currentBarColor = color( min(255, red(barColor) * pulseBrightness), min(255, green(barColor) * pulseBrightness), min(255, blue(barColor) * pulseBrightness), alpha(barColor) ); histogramBarPulseState[i]--; } fill(currentBarColor); noStroke(); rect(barX, chartHeightMax - barH, barWidth - max(1, 1 * currentScale), barH); } stroke(150); strokeWeight(max(1, 1 * currentScale)); line(0, chartHeightMax, chartWidth, chartHeightMax); noStroke(); pop(); }
+function drawMarker() { if (gameState !== 'PLAYING' || markerX === undefined || markerY === undefined) return; push(); fill(markerColor); noStroke(); ellipse(markerX, markerY, markerSize * 1.2, markerSize * 1.2); pop(); }
 
 
 // ============================ Body Creation Functions ============================
 // ... (createPegs, createSlotsAndDividers, createBoundaries, createPhysicsBall - no changes needed) ...
-function createPegs() { pegs.forEach(peg => { if (Composite.get(world, peg.id, 'body')) { World.remove(world, peg); } }); pegs = []; lastRowPegPositionsX = []; topRowOuterPegsX = []; lastPegRowY = 0; let scaledPegRadius = basePegRadius * currentScale; let scaledPegSpacing = basePegSpacing * currentScale; let scaledStartY = baseStartYPegs * currentScale; const options = { isStatic: true, restitution: pegRestitution, friction: pegFriction, label: 'peg', plugin: { glowTimer: 0 } }; for (let row = 0; row < pegRowsTotal; row++) { let pegsInRow = row + 3; let y = scaledStartY + row * scaledPegSpacing * 0.95; let totalWidth = (pegsInRow - 1) * scaledPegSpacing; let startX = (gameAreaWidth - totalWidth) / 2; if (y > lastPegRowY) { lastPegRowY = y; } let isLastRow = (row === pegRowsTotal - 1); let isFirstRow = (row === 0); for (let col = 0; col < pegsInRow; col++) { let x = startX + col * scaledPegSpacing; let peg = Bodies.circle(x, y, scaledPegRadius, options); World.add(world, peg); pegs.push(peg); if (isLastRow) { lastRowPegPositionsX.push(x); } if (isFirstRow) { if (col === 0) topRowOuterPegsX[0] = x; if (col === pegsInRow - 1) topRowOuterPegsX[1] = x; } } } if (topRowOuterPegsX.length === 2) { markerMinX = topRowOuterPegsX[0]; markerMaxX = topRowOuterPegsX[1]; if (markerX === undefined || markerX < markerMinX || markerX > markerMaxX) { markerX = markerMinX; } markerY = scaledStartY - 30 * currentScale; markerSpeed = baseMarkerSpeed * currentScale; markerSize = baseMarkerSize * currentScale; } else { console.error("Could not find outermost top pegs for marker! Using fallback bounds."); markerMinX = gameAreaWidth * 0.1; markerMaxX = gameAreaWidth * 0.9; markerX = markerMinX; markerY = scaledStartY - 30 * currentScale; } if (lastRowPegPositionsX.length !== numSlots + 1) { console.error(`Peg position error: Expected ${numSlots + 1} bottom peg X positions for dividers, found ${lastRowPegPositionsX.length}. Dividers might be incorrect.`); } }
-function createSlotsAndDividers() { dividers.forEach(div => { if (Composite.get(world, div.id, 'body')) { World.remove(world, div); } }); slotSensors.forEach(sen => { if (Composite.get(world, sen.id, 'body')) { World.remove(world, sen); } }); dividers = []; slotSensors = []; let scaledSlotHeight = baseSlotHeight * currentScale; let scaledDividerWidth = max(1, baseDividerWidth * currentScale); if (typeof slotStartY === 'undefined') { console.error("slotStartY undefined in createSlotsAndDividers. Cannot create slots."); return; } if (!lastRowPegPositionsX || lastRowPegPositionsX.length !== numSlots + 1) { console.error(`Incorrect number of peg positions for dividers: Expected ${numSlots + 1}, found ${lastRowPegPositionsX?.length}. Using fallback positions.`); lastRowPegPositionsX = []; const approxSlotWidth = gameAreaWidth * 0.8 / numSlots; const startDivX = gameAreaWidth * 0.1; for (let i = 0; i <= numSlots; i++) { lastRowPegPositionsX.push(startDivX + i * approxSlotWidth); } } const sensorOptions = { isStatic: true, isSensor: true, label: '' }; const dividerOptions = { isStatic: true, restitution: dividerRestitution, friction: dividerFriction, label: 'divider' }; const dividerHeight = scaledSlotHeight + 5 * currentScale; const dividerY = slotStartY + scaledSlotHeight / 2; let currentDividers = []; for (let i = 0; i < lastRowPegPositionsX.length; i++) { let dividerX = lastRowPegPositionsX[i]; let divider = Bodies.rectangle(dividerX, dividerY, scaledDividerWidth, dividerHeight, dividerOptions); currentDividers.push(divider); } dividers = currentDividers; World.add(world, dividers); const sensorY = slotStartY + scaledSlotHeight / 2; for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1]) { console.error(`Missing divider for slot sensor ${i}`); continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let sensorSlotWidth = dividerRightX - dividerLeftX; if (sensorSlotWidth <= 0) { sensorSlotWidth = 1; } let currentSensorOptions = { ...sensorOptions, label: `slot_${i}` }; let sensor = Bodies.rectangle(slotCenterX, sensorY, sensorSlotWidth, scaledSlotHeight, currentSensorOptions); World.add(world, sensor); slotSensors.push(sensor); } }
-function createBoundaries() { boundaries.forEach(body => { if (Composite.get(world, body.id, 'body')) { World.remove(world, body); } }); boundaries = []; const wallOptions = { isStatic: true, isSensor: true, label: 'wall' }; const groundOptions = { isStatic: true, restitution: groundRestitution, friction: groundFriction, label: 'ground' }; const wallThickness = max(5, 20 * currentScale); if (typeof slotStartY === 'undefined') { console.error("Cannot create boundaries: slotStartY is undefined."); return; } let scaledSlotHeight = baseSlotHeight * currentScale; const groundY = slotStartY + scaledSlotHeight + wallThickness / 2 - max(1, 1 * currentScale); let leftmostX = wallThickness / 2; let rightmostX = gameAreaWidth - wallThickness / 2; if (dividers.length > 0 && dividers[0].position && dividers[dividers.length - 1].position) { const firstDividerX = dividers[0].position.x; const lastDividerX = dividers[dividers.length - 1].position.x; const scaledDividerWidth = max(1, baseDividerWidth * currentScale); const wallPadding = (basePegSpacing * 1.5) * currentScale; leftmostX = Math.max(wallThickness / 2, firstDividerX - wallPadding - scaledDividerWidth / 2); rightmostX = Math.min(gameAreaWidth - wallThickness / 2, lastDividerX + wallPadding + scaledDividerWidth / 2); } else { console.warn("No dividers found for precise boundary calculation. Using default bounds."); } let leftWall = Bodies.rectangle(leftmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let rightWall = Bodies.rectangle(rightmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let groundWidth = rightmostX - leftmostX + wallThickness; let groundCenterX = (leftmostX + rightmostX) / 2; let ground = Bodies.rectangle(groundCenterX, groundY, groundWidth, wallThickness, groundOptions); World.add(world, [leftWall, rightWall, ground]); boundaries.push(leftWall, rightWall, ground); }
+function createPegs() { pegs.forEach(peg => { if (Composite.get(world, peg.id, 'body')) { World.remove(world, peg); } }); pegs = []; lastRowPegPositionsX = []; topRowOuterPegsX = []; lastPegRowY = 0; let scaledPegRadius = basePegRadius * currentScale; let scaledPegSpacing = basePegSpacing * currentScale; let scaledStartY = baseStartYPegs * currentScale; const options = { isStatic: true, restitution: pegRestitution, friction: pegFriction, label: 'peg', plugin: { glowTimer: 0 } }; for (let row = 0; row < pegRowsTotal; row++) { let pegsInRow = row + 3; let y = scaledStartY + row * scaledPegSpacing * 0.95; let totalWidth = (pegsInRow - 1) * scaledPegSpacing; let startX = (gameAreaWidth - totalWidth) / 2; if (y > lastPegRowY) { lastPegRowY = y; } let isLastRow = (row === pegRowsTotal - 1); let isFirstRow = (row === 0); for (let col = 0; col < pegsInRow; col++) { let x = startX + col * scaledPegSpacing; let peg = Bodies.circle(x, y, scaledPegRadius, options); World.add(world, peg); pegs.push(peg); if (isLastRow) { lastRowPegPositionsX.push(x); } if (isFirstRow) { if (col === 0) topRowOuterPegsX[0] = x; if (col === pegsInRow - 1) topRowOuterPegsX[1] = x; } } } if (topRowOuterPegsX.length === 2) { markerMinX = topRowOuterPegsX[0]; markerMaxX = topRowOuterPegsX[1]; if (markerX === undefined || markerX < markerMinX || markerX > markerMaxX) { markerX = markerMinX; } markerY = scaledStartY - 30 * currentScale; markerSpeed = baseMarkerSpeed * currentScale; markerSize = baseMarkerSize * currentScale; } else { console.error("Could not find outermost top pegs for marker! Using fallback bounds."); markerMinX = gameAreaWidth * 0.1; markerMaxX = gameAreaWidth * 0.9; markerX = markerMinX; markerY = scaledStartY - 30 * currentScale; } if (lastRowPegPositionsX.length !== numSlots + 1) { console.warn(`Peg position warning: Expected ${numSlots + 1} bottom peg X positions for dividers, found ${lastRowPegPositionsX?.length}. Dividers might be slightly misaligned.`); } }
+function createSlotsAndDividers() { dividers.forEach(div => { if (Composite.get(world, div.id, 'body')) { World.remove(world, div); } }); slotSensors.forEach(sen => { if (Composite.get(world, sen.id, 'body')) { World.remove(world, sen); } }); dividers = []; slotSensors = []; let scaledSlotHeight = baseSlotHeight * currentScale; let scaledDividerWidth = max(1, baseDividerWidth * currentScale); if (typeof slotStartY === 'undefined') { console.error("slotStartY undefined in createSlotsAndDividers. Cannot create slots."); return; } let dividerXPositions = []; if (lastRowPegPositionsX && lastRowPegPositionsX.length === numSlots + 1) { dividerXPositions = lastRowPegPositionsX; } else { console.error(`Incorrect number of peg positions for dividers: Expected ${numSlots + 1}, found ${lastRowPegPositionsX?.length}. Using approximated positions.`); const approxSlotWidth = gameAreaWidth * 0.8 / numSlots; const startDivX = gameAreaWidth * 0.1; for (let i = 0; i <= numSlots; i++) { dividerXPositions.push(startDivX + i * approxSlotWidth); } } const sensorOptions = { isStatic: true, isSensor: true, label: '' }; const dividerOptions = { isStatic: true, restitution: dividerRestitution, friction: dividerFriction, label: 'divider' }; const dividerHeight = scaledSlotHeight + 5 * currentScale; const dividerY = slotStartY + scaledSlotHeight / 2; let currentDividers = []; for (let i = 0; i < dividerXPositions.length; i++) { let dividerX = dividerXPositions[i]; let divider = Bodies.rectangle(dividerX, dividerY, scaledDividerWidth, dividerHeight, dividerOptions); currentDividers.push(divider); } dividers = currentDividers; World.add(world, dividers); const sensorY = slotStartY + scaledSlotHeight / 2; for (let i = 0; i < numSlots; i++) { if (!dividers[i] || !dividers[i + 1]) { console.error(`Missing divider for slot sensor ${i}`); continue; } let dividerLeftX = dividers[i].position.x; let dividerRightX = dividers[i + 1].position.x; let slotCenterX = (dividerLeftX + dividerRightX) / 2; let sensorSlotWidth = dividerRightX - dividerLeftX; if (sensorSlotWidth <= 0) { sensorSlotWidth = 1; } let currentSensorOptions = { ...sensorOptions, label: `slot_${i}` }; let sensor = Bodies.rectangle(slotCenterX, sensorY, sensorSlotWidth, scaledSlotHeight, currentSensorOptions); World.add(world, sensor); slotSensors.push(sensor); } }
+function createBoundaries() { boundaries.forEach(body => { if (Composite.get(world, body.id, 'body')) { World.remove(world, body); } }); boundaries = []; const wallOptions = { isStatic: true, isSensor: true, label: 'wall' }; const groundOptions = { isStatic: true, restitution: groundRestitution, friction: groundFriction, label: 'ground' }; const wallThickness = max(5, 20 * currentScale); if (typeof slotStartY === 'undefined') { console.error("Cannot create boundaries: slotStartY is undefined."); return; } let scaledSlotHeight = baseSlotHeight * currentScale; const groundY = slotStartY + scaledSlotHeight + wallThickness / 2 - max(1, 1 * currentScale); let leftmostX = wallThickness / 2; let rightmostX = gameAreaWidth - wallThickness / 2; if (dividers.length > 0 && dividers[0].position && dividers[dividers.length - 1].position) { const firstDividerX = dividers[0].position.x; const lastDividerX = dividers[dividers.length - 1].position.x; const scaledDividerWidth = max(1, baseDividerWidth * currentScale); const wallPadding = (basePegSpacing * 1.0) * currentScale; leftmostX = Math.max(wallThickness / 2, firstDividerX - wallPadding - scaledDividerWidth / 2); rightmostX = Math.min(gameAreaWidth - wallThickness / 2, lastDividerX + wallPadding + scaledDividerWidth / 2); } else { console.warn("No dividers found for precise boundary calculation. Using default bounds."); } let leftWall = Bodies.rectangle(leftmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let rightWall = Bodies.rectangle(rightmostX, scaledCanvasHeight / 2, wallThickness, scaledCanvasHeight * 1.5, wallOptions); let groundWidth = rightmostX - leftmostX + wallThickness; let groundCenterX = (leftmostX + rightmostX) / 2; let ground = Bodies.rectangle(groundCenterX, groundY, groundWidth, wallThickness, groundOptions); World.add(world, [leftWall, rightWall, ground]); boundaries.push(leftWall, rightWall, ground); }
 function createPhysicsBall(x, y) { const scaledBallRadius = currentBallRadius * currentScale; const ballColor = neonBlue; const label = 'ball_regular'; const options = { restitution: ballRestitution, friction: 0.05, frictionAir: ballFrictionAir, density: ballDensity, label: label, isStatic: false, plugin: { type: 'regular', hitWall: false, path: [] }, render: { fillStyle: `rgb(${ballColor[0]}, ${ballColor[1]}, ${ballColor[2]})` } }; let ball = Bodies.circle(x, y, scaledBallRadius, options); Body.setVelocity(ball, { x: Common.random(-0.1, 0.1) * currentScale, y: 0 }); World.add(world, ball); balls.push(ball); }
 
 // ============================ Collision & Scoring ============================
@@ -1482,7 +1192,11 @@ function createPhysicsBall(x, y) { const scaledBallRadius = currentBallRadius * 
 function handleCollisions(event) { let pairs = event.pairs; for (let i = 0; i < pairs.length; i++) { let pair = pairs[i]; if (!pair || !pair.isActive || !pair.collision) continue; let bodyA = pair.bodyA; let bodyB = pair.bodyB; let ball = null, sensor = null, ground = null, wall = null, peg = null, divider = null; if (bodyA.label === 'ball_regular') ball = bodyA; else if (bodyB.label === 'ball_regular') ball = bodyB; if (bodyA.label.startsWith('slot_')) sensor = bodyA; else if (bodyB.label.startsWith('slot_')) sensor = bodyB; if (bodyA.label === 'ground') ground = bodyA; else if (bodyB.label === 'ground') ground = bodyB; if (bodyA.label === 'wall') wall = bodyA; else if (bodyB.label === 'wall') wall = bodyB; if (bodyA.label === 'peg') peg = bodyA; else if (bodyB.label === 'peg') peg = bodyB; if (bodyA.label === 'divider') divider = bodyA; else if (bodyB.label === 'divider') divider = bodyB; if (ball && sensor) { if (!Composite.get(world, ball.id, 'body')) continue; let hitSlotIndex = parseInt(sensor.label.split('_')[1]); if (hitSlotIndex >= 0 && hitSlotIndex < numSlots) { let sensorBody = slotSensors[hitSlotIndex]; if (!sensorBody) { console.warn(`Collision: Could not find sensor body for index ${hitSlotIndex}`); continue; } let slotCenterX = sensorBody.position.x; let slotCenterY = sensorBody.position.y; let slotWidth = sensorBody.bounds.max.x - sensorBody.bounds.min.x; slotHitCounts[hitSlotIndex]++; histogramBarPulseState[hitSlotIndex] = histogramPulseDuration; slotBounceState[hitSlotIndex] = bounceDuration; slotGlowState[hitSlotIndex] = slotGlowDuration; createParticleBurst(slotCenterX, slotCenterY); createRippleEffect(slotCenterX, slotCenterY, slotWidth); createBackgroundRipple(slotCenterX, slotCenterY); let baseMultiplierValue = slotMultipliers[hitSlotIndex]; let finalMultiplier = baseMultiplierValue; let amountWon = 0; if (currentGameMode === 'SURVIVAL') { if (isDoubleMultiplierActive) finalMultiplier *= 2; amountWon = betAmount * finalMultiplier; } else if (currentGameMode === 'HIGHSCORE') { finalMultiplier = baseMultiplierValue; amountWon = finalMultiplier * 10; } let amountToAdd = floor(amountWon); if (currentGameMode === 'SURVIVAL') { sessionScore += amountToAdd; score += amountToAdd; } else if (currentGameMode === 'HIGHSCORE') { highScorePoints += amountToAdd; } recentHits.push({ value: finalMultiplier, timestamp: frameCount }); if (recentHits.length > maxMultiplierHistory) { recentHits.shift(); } if (blopSound && blopSound.isLoaded()) { blopSound.play(); } if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else { console.warn(`Invalid slot index ${hitSlotIndex} from sensor ${sensor.label}. Removing ball.`); if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } } else if (ball && peg) { if (peg.plugin) { peg.plugin.glowTimer = pegGlowDuration; } if (pair.collision.normal) { let forceDirection = Matter.Vector.sub(ball.position, peg.position); forceDirection = Matter.Vector.normalise(forceDirection); forceDirection = Matter.Vector.mult(forceDirection, horizontalKickStrength); forceDirection.y *= 0.1; Body.applyForce(ball, ball.position, forceDirection); } createBackgroundRipple(peg.position.x, peg.position.y); } else if (ball && wall) { if (Composite.get(world, ball.id, 'body')) { World.remove(world, ball); } for (let j = balls.length - 1; j >= 0; j--) { if (balls[j].id === ball.id) { balls.splice(j, 1); break; } } } else if (ball && (ground || divider)) { /* Physics handles bounce */ } } }
 
 // ============================ Event Handlers & Other Logic ============================
-// ... (Leaderboard Functions, Audio Functions, Input Handlers, Game Logic - no changes needed) ...
+// ... (showLeaderboardForm, positionLeaderboardForm, hideLeaderboardForm, handleScoreSubmittedSuccessfully - unchanged) ...
+// ... (fetchLeaderboardData, fetchAllLeaderboards - logic updated to handle context but signature unchanged externally) ...
+// ... (firstInteraction, startAudioPlayback, mousePressed, mouseDragged, mouseReleased, keyPressed, checkSliderInteraction, updateSliderValue - unchanged) ...
+// ... (activateDoubleDrop, activateDoubleMultiplier, handleDrop, handleSurvivalDecay, updateGoldLossVisuals, drawGoldLossVisuals, handlePowerupTimersAndVisuals - unchanged) ...
+// ... (returnToLaunchMenuCleanup, resetGame - unchanged) ...
 function showLeaderboardForm(finalScore, mode) {
     const form = document.getElementById('leaderboard-form');
     const scoreInput = document.getElementById('score');
@@ -1500,9 +1214,10 @@ function showLeaderboardForm(finalScore, mode) {
         setTimeout(() => { nameInput.focus(); }, 50);
     } else {
         console.error("Could not find all leaderboard form elements! Skipping form display.");
+        // Use end-game specific error state
         leaderboardError = "Leaderboard form unavailable.";
         gameOverState = 'SHOWING_LEADERBOARD';
-        fetchLeaderboardData();
+        fetchLeaderboardData('endgame', currentGameMode); // Fetch for endgame display
     }
 }
 
@@ -1543,43 +1258,102 @@ function handleScoreSubmittedSuccessfully() {
     }
     hideLeaderboardForm();
     gameOverState = 'SHOWING_LEADERBOARD';
-    fetchLeaderboardData();
+    fetchLeaderboardData('endgame', currentGameMode); // Fetch for endgame display after submit
 }
 
-async function fetchLeaderboardData() {
+// Fetches data for EITHER the hover leaderboards OR the end-game screen
+async function fetchLeaderboardData(context, mode) {
+    if (!mode) {
+        console.error("fetchLeaderboardData called without a mode!");
+        return;
+    }
     if (typeof window.supabaseClient === 'undefined' || !window.supabaseClient) {
          console.error("Supabase client (window.supabaseClient) not available in sketch.js!");
-         leaderboardError = "Database connection failed."; leaderboardLoading = false; return;
+         if (context === 'hover') {
+             if (mode === 'survival') survivalLeaderboardError = "DB connection failed.";
+             else highScoreLeaderboardError = "DB connection failed.";
+         } else {
+             leaderboardError = "Database connection failed.";
+         }
+         return;
     }
-    if (leaderboardLoading) return;
-    leaderboardLoading = true; leaderboardData = null; leaderboardError = null;
-    let tableName = currentGameMode === 'SURVIVAL' ? 'survival_leaderboard' : 'high_score_leaderboard';
-    if (!currentGameMode) {
-        console.warn("fetchLeaderboardData: currentGameMode is null, defaulting to high_score");
-        tableName = 'high_score_leaderboard';
+
+    let isLoading, dataStore, errorStore;
+    if (context === 'hover') {
+        if (mode === 'survival') { isLoading = survivalLeaderboardLoading; }
+        else { isLoading = highScoreLeaderboardLoading; }
+    } else {
+        isLoading = leaderboardLoading;
     }
-    console.log(`Fetching leaderboard data from ${tableName}...`);
+
+    // Note: We allow fetches even if currently loading, subsequent calls will just update the data when done.
+    // if (isLoading) return;
+
+    // Set loading state
+    if (context === 'hover') {
+        if (mode === 'survival') { survivalLeaderboardLoading = true; survivalLeaderboardData = null; survivalLeaderboardError = null; }
+        else { highScoreLeaderboardLoading = true; highScoreLeaderboardData = null; highScoreLeaderboardError = null; }
+    } else {
+        leaderboardLoading = true; leaderboardData = null; leaderboardError = null;
+    }
+
+    let tableName = mode === 'survival' ? 'survival_leaderboard' : 'high_score_leaderboard';
+    console.log(`Fetching ${context} leaderboard data from ${tableName}...`);
+
     try {
+        // Fetch up to 10 entries regardless of context, as hover needs 10 now too.
         const { data, error } = await window.supabaseClient
             .from(tableName)
             .select('player_name, score')
             .order('score', { ascending: false })
-            .limit(leaderboardMaxEntries);
+            .limit(leaderboardMaxEntries); // Use the end-game limit (10)
+
         if (error) {
-            console.error('Error fetching leaderboard:', error);
-            leaderboardError = error.message;
+            console.error(`Error fetching ${context} leaderboard (${mode}):`, error);
+            if (context === 'hover') {
+                if (mode === 'survival') survivalLeaderboardError = error.message;
+                else highScoreLeaderboardError = error.message;
+            } else {
+                leaderboardError = error.message;
+            }
         } else {
-            console.log('Leaderboard data received:', data);
-            leaderboardData = data;
+            console.log(`${context} leaderboard data (${mode}) received:`, data);
+            if (context === 'hover') {
+                 if (mode === 'survival') survivalLeaderboardData = data;
+                 else highScoreLeaderboardData = data;
+            } else {
+                 leaderboardData = data;
+            }
         }
     } catch (e) {
-        console.error("Exception during Supabase fetch:", e);
-        leaderboardError = "A critical error occurred fetching scores.";
+        console.error(`Exception during Supabase fetch for ${context} (${mode}):`, e);
+        let errorMsg = "A critical error occurred fetching scores.";
+        if (context === 'hover') {
+             if (mode === 'survival') survivalLeaderboardError = errorMsg;
+             else highScoreLeaderboardError = errorMsg;
+        } else {
+             leaderboardError = errorMsg;
+        }
     } finally {
-        leaderboardLoading = false;
+        // Clear loading state
+        if (context === 'hover') {
+            if (mode === 'survival') survivalLeaderboardLoading = false;
+            else highScoreLeaderboardLoading = false;
+        } else {
+            leaderboardLoading = false;
+        }
     }
 }
 
+// Wrapper to fetch both leaderboards for the hover panels
+function fetchAllLeaderboards() {
+    console.log("Fetching both leaderboards for hover display...");
+    fetchLeaderboardData('hover', 'survival');
+    fetchLeaderboardData('hover', 'highscore');
+}
+
+
+// --- Audio & Input Functions ---
 function firstInteraction() {
     if (!audioStarted) {
         console.log("Audio Context starting trigger...");
@@ -1635,9 +1409,12 @@ function mousePressed() {
         if (isFormVisible) {
             const rect = formElement.getBoundingClientRect();
              let formRect = formElement.getBoundingClientRect();
-             if (mouseX >= formRect.left && mouseX <= formRect.right &&
-                 mouseY >= formRect.top && mouseY <= formRect.bottom) {
-                return;
+             // Convert mouse coords relative to canvas if needed, but form is HTML
+             let mouseWindowX = mouseX + (windowWidth - scaledCanvasWidth) / 2;
+             let mouseWindowY = mouseY + (windowHeight - scaledCanvasHeight) / 2;
+             if (mouseWindowX >= formRect.left && mouseWindowX <= formRect.right &&
+                 mouseWindowY >= formRect.top && mouseWindowY <= formRect.bottom) {
+                return; // Click was inside the form, let HTML handle it
             }
         }
 
@@ -1648,6 +1425,7 @@ function mousePressed() {
             let mouseCanvasX = mouseX;
             let mouseCanvasY = mouseY;
 
+            // Check clicks only within the game area part of the canvas for these buttons
             if (mouseCanvasX >= 0 && mouseCanvasX <= gameAreaWidth && mouseCanvasY >= 0 && mouseCanvasY <= scaledCanvasHeight) {
                 if (mouseCanvasX > btnX && mouseCanvasX < btnX + btnW && mouseCanvasY > restartBtnY && mouseCanvasY < restartBtnY + btnH) {
                     hideLeaderboardForm(); startTransition('PLAYING', prepareGameForMode); return;
@@ -1657,6 +1435,7 @@ function mousePressed() {
                 }
             }
         }
+         // If form was visible but click was outside it, do nothing else either
         if (isFormVisible) return;
 
     } else if (gameState === 'PLAYING') {
@@ -1692,6 +1471,7 @@ function mousePressed() {
             }
         }
     }
+     // Clicks in LAUNCH_MENU are handled by the HTML buttons
 }
 
 function mouseDragged() {
@@ -1719,7 +1499,7 @@ function keyPressed() {
             let canDrop = (currentGameMode === 'SURVIVAL' && score >= betAmount) || (currentGameMode === 'HIGHSCORE' && ballsRemaining > 0);
             if (canDrop) {
                 handleDrop();
-                return false;
+                return false; // Prevent default space bar scroll
             }
         }
     }
@@ -1738,6 +1518,7 @@ function keyPressed() {
              return false;
          }
     }
+    // Allow default browser behavior for other keys if not handled
 }
 
 function checkSliderInteraction(slider, eventType) {
@@ -1788,7 +1569,7 @@ function checkSliderInteraction(slider, eventType) {
                 newValue = constrain(newValue, slider.minVal, slider.maxVal);
                 updateSliderValue(slider, newValue);
              } else {
-                 slider.dragging = false;
+                 slider.dragging = false; // Stop dragging if disabled mid-drag
              }
              interactionOccurred = true;
          }
@@ -1885,6 +1666,12 @@ function handleSurvivalDecay() {
             isGameOverConditionMet = true;
             isGameOverFromDecay = true;
         }
+         // Check for immediate game over if score drops below threshold after decay
+         if (score < minBetAmount && balls.length === 0) {
+             isGameOverConditionMet = true;
+         } else if (score <= 0 && balls.length === 0) {
+             isGameOverConditionMet = true;
+         }
     }
 }
 
@@ -1949,7 +1736,6 @@ function drawGoldLossVisuals() {
 function handlePowerupTimersAndVisuals() { push(); let time = millis() / 1000.0; noStroke(); let scaledBonusTextSize = max(20, 40 * currentScale); let scaledPowerupTextSize = scaledBonusTextSize * 0.9; let bonusY = scaledCanvasHeight / 2 - 100 * currentScale; let powerupOffsetY = scaledBonusTextSize * 1.2; let scaledShadowBlur = max(5, 15 * currentScale); textFont(titleFont); textAlign(CENTER, CENTER); if (bonusBallTimer > 0) { bonusBallTimer--; let alpha = map(bonusBallTimer, 0, bonusBallDuration, 0, 255); fill(bonusColor[0], bonusColor[1], bonusColor[2], alpha); textSize(scaledBonusTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${bonusColor[0]},${bonusColor[1]},${bonusColor[2]},${alpha / 255 * 0.7})`; text(bonusBallMessage, gameAreaWidth / 2, bonusY); drawingContext.shadowBlur = 0; } else { bonusBallMessage = ''; } let ddY = bonusY + powerupOffsetY; if (doubleDropMessageTimer > 0) { doubleDropMessageTimer--; let alpha = map(doubleDropMessageTimer, 0, powerupMessageDuration, 0, 255); fill(neonBlue[0], neonBlue[1], neonBlue[2], alpha); textSize(scaledPowerupTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${neonBlue[0]},${neonBlue[1]},${neonBlue[2]},${alpha / 255 * 0.7})`; text(doubleDropMessage, gameAreaWidth / 2, ddY); drawingContext.shadowBlur = 0; } else { doubleDropMessage = ''; } let dmY = bonusY + powerupOffsetY * (doubleDropMessageTimer > 0 ? 2 : 1); if (doubleMultiplierMessageTimer > 0) { doubleMultiplierMessageTimer--; let alpha = map(doubleMultiplierMessageTimer, 0, powerupMessageDuration, 0, 255); fill(neonYellow[0], neonYellow[1], neonYellow[2], alpha); textSize(scaledPowerupTextSize); drawingContext.shadowBlur = scaledShadowBlur; drawingContext.shadowColor = `rgba(${neonYellow[0]},${neonYellow[1]},${neonYellow[2]},${alpha / 255 * 0.7})`; text(doubleMultiplierMessage, gameAreaWidth / 2, dmY); drawingContext.shadowBlur = 0; } else { doubleMultiplierMessage = ''; } if (isDoubleDropActive && doubleDropTimer > 0) doubleDropTimer--; if (isDoubleMultiplierActive && doubleMultiplierTimer > 0) doubleMultiplierTimer--; if (isDoubleDropActive && doubleDropTimer <= 0) { isDoubleDropActive = false; } if (isDoubleMultiplierActive && doubleMultiplierTimer <= 0) { isDoubleMultiplierActive = false; } let scaledThicknessMin = max(1, 3 * currentScale); let scaledThicknessMax = max(3, 8 * currentScale); let scaledInset = 10 * currentScale; let scaledRectBorderRadius = max(2, 5 * currentScale); if (isDoubleDropActive) { let pulse = (sin(time * 8) + 1) / 2; let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax); let borderCol = lerpColor(color(neonBlue[0], neonBlue[1], neonBlue[2]), color(trueRed[0], trueRed[1], trueRed[2]), pulse); stroke(borderCol); strokeWeight(thickness); noFill(); rect(thickness / 2, thickness / 2, gameAreaWidth - thickness, scaledCanvasHeight - thickness, scaledRectBorderRadius); } if (isDoubleMultiplierActive) { let inset = isDoubleDropActive ? scaledInset : 0; let pulse = (sin(time * 6 + PI / 2) + 1) / 2; let thickness = map(pulse, 0, 1, scaledThicknessMin, scaledThicknessMax); stroke(neonYellow[0], neonYellow[1], neonYellow[2], map(pulse, 0, 1, 150, 255)); strokeWeight(thickness); noFill(); rect(thickness / 2 + inset, thickness / 2 + inset, gameAreaWidth - thickness - inset * 2, scaledCanvasHeight - thickness - inset * 2, scaledRectBorderRadius); } noStroke(); pop(); }
 
 // --- Game State Management ---
-// ... (returnToLaunchMenuCleanup, resetGame - no changes needed) ...
 function returnToLaunchMenuCleanup() {
     currentGameMode = null;
     let bodiesToRemove = Composite.allBodies(world).filter(body => body.label === 'ball_regular');
@@ -1962,16 +1748,22 @@ function returnToLaunchMenuCleanup() {
     isDoubleDropActive = false; doubleDropTimer = 0; doubleDropMessageTimer = 0;
     isDoubleMultiplierActive = false; doubleMultiplierTimer = 0; doubleMultiplierMessageTimer = 0;
     bonusBallTimer = 0; isGoldLossCountdownActive = false; goldLossMessageActive = false;
-    goldLostAmountForDisplay = 0; highScorePoints = 0;
-    gameOverState = 'NONE'; leaderboardData = null; leaderboardLoading = false; leaderboardError = null;
+    goldLostAmountForDisplay = 0; highScorePoints = 0; sessionScore = 0; score = 0;
+    gameOverState = 'NONE';
+    leaderboardData = null; leaderboardLoading = false; leaderboardError = null; // Reset endgame leaderboard state
     hideLeaderboardForm();
     if (speedSlider) speedSlider.enabled = true;
     if (betSlider) betSlider.enabled = true;
     if (ballSizeSlider) ballSizeSlider.enabled = true;
+
+    // Reset hover states and fetch data for launch menu
     isHoveringSurvival = false;
     isHoveringHighScore = false;
     survivalHoverAnimProgress = 0;
     highScoreHoverAnimProgress = 0;
+    survivalLeaderboardAnimProgress = 0;
+    highScoreLeaderboardAnimProgress = 0;
+    fetchAllLeaderboards(); // Fetch fresh data for hover display
 }
 
 function resetGame() {
