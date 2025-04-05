@@ -1,4 +1,4 @@
-// P5.js + Matter.js Plinko Game: "DROP" - v0.71 (Update: Refined Survival desc highlight)
+// P5.js + Matter.js Plinko Game: "DROP" - v0.72 (Update: Max bet to 100k)
 
 // <<< Ensure p5.sound.min.js is included in your HTML file >>>
 // <<< Ensure Supabase client is initialized in HTML and globally accessible via window.supabaseClient >>>
@@ -31,7 +31,7 @@ const funnelColor = [200, 200, 220, 150]; const bounceDuration = 15; const baseB
 const initialScoreSurvival = 100; const highScoreBallsTotal = 20; const highScoreBallCost = 10;
 const highScoreStartingGold = highScoreBallsTotal * highScoreBallCost;
 const minBetAmount = 10;
-const maxBetAmount = 10000;
+const maxBetAmount = 100000; // <<< Updated max bet amount >>>
 const baseTitleY = 30; const baseTitleSize = 32; const baseUISideMargin = 15;
 const baseUIScoreTextSize = 13;
 const baseButtonTextSize = 9; const baseButtonWidth = 160; const baseButtonHeight = 40; const baseSlotTextSize = 8; const baseScoreY = 55; const baseMultiplierPanelTextSize = 14; const baseOddsDisplayTextSize = 7.5;
@@ -77,7 +77,7 @@ const lossMessageTextSizeBase = 100; const lossMessageStartScale = 1.5; const lo
 const menuFadeInSpeed = 5; const parallaxLayersCount = 3; const parallaxPegsPerLayer = 50; const parallaxMaxOffsetFactor = 0.05; const menuParticleCount = 40; const menuParticleBaseSpeed = 0.5; const menuParticleLifespan = 250; const menuFallingBallCount = 25; const menuBackgroundBallGravity = 0.03; const menuBackgroundBallSpeedMin = 0.5; const menuBackgroundBallSpeedMax = 1.8; const menuButtonHoverScale = 1.06; const launchMenuSpacingBelowTitle = 30;
 const gameOverButtonWidthScale = 1.3; const gameOverButtonHeightScale = 1.3; const gameOverButtonSpacing = 20; const numStars = 400; const starfieldSpeedFactor = 0.15; const gameOverSpeedMultiplier = 2.0; const starHueShiftSpeed = 0.05; const shootingStarChance = 0.008; const shootingStarSpeedMin = 4; const shootingStarSpeedMax = 8; const shootingStarLength = 50; const shootingStarColor = [220, 220, 255]; const baseStarParallaxFactor = 0.5;
 const transitionDuration = 30; const FIXED_DELTA_TIME = 1000 / 60;
-const DROP_GAME_VERSION = "V0.71"; // <<< VERSION number incremented >>>
+const DROP_GAME_VERSION = "V0.72"; // <<< VERSION number updated >>>
 
 // Background Ripple Effect Constants
 const backgroundRippleLifespan = 40;
@@ -239,7 +239,7 @@ function calculateLayout(w, h) {
         betSlider.x = sliderX;
         betSlider.y = currentContentOriginY;
         betSlider.minVal = minBetAmount;
-        betSlider.maxVal = maxBetAmount;
+        betSlider.maxVal = maxBetAmount; // Automatically uses the updated constant
         let betSliderTrackY = betSlider.y + 25 * currentScale;
         oddsDisplayYLine1 = betSliderTrackY + baseOddsDisplayYOffsetFromTrack * currentScale;
         oddsLineSpacing = max(6 * currentScale, baseOddsLineSpacing * currentScale);
@@ -417,11 +417,11 @@ function setup() {
     showAnalyzer = true;
     for (let i = 0; i < numSlots; i++) { slotHitCounts[i] = 0; slotBounceState[i] = 0; histogramBarPulseState[i] = 0; slotGlowState[i] = 0; }
     speedSlider = { value: defaultSpeedSliderDisplay, minVal: minSpeedSliderDisplayValue, maxVal: maxSpeedSliderDisplayValue, label: "Speed", dragging: false, enabled: true };
-    betSlider = { value: minBetAmount, minVal: minBetAmount, maxVal: maxBetAmount, label: "Bet Amount", dragging: false, enabled: true };
+    betSlider = { value: minBetAmount, minVal: minBetAmount, maxVal: maxBetAmount, label: "Bet Amount", dragging: false, enabled: true }; // Max val uses constant
     ballSizeSlider = { value: currentBallRadius, minVal: minBallRadius, maxVal: maxBallRadius, label: "Ball Size", dragging: false, enabled: true };
     sfxVolumeSlider = { value: sfxVolume, minVal: 0.0, maxVal: 1.0, label: "SFX Volume", dragging: false, enabled: true };
     musicVolumeSlider = { value: defaultMusicVolume * 100, minVal: 0, maxVal: 100, label: "Music Volume", dragging: false, enabled: true };
-    calculateLayout(scaledCanvasWidth, scaledCanvasHeight);
+    calculateLayout(scaledCanvasWidth, scaledCanvasHeight); // Ensure slider bounds are set
 
     createPegs();
     setupMenuEffects();
@@ -965,7 +965,7 @@ function drawHoverLeaderboard(mode, animProgress, data, loading, error) {
     pop();
 }
 
-// --- Updated: drawHoverDescription - Refined highlighting ---
+// --- Updated: drawHoverDescription - Refined highlight target ---
 function drawHoverDescription(button, description, animProgress, slideDirection = 'TOP', mode = null) {
     if (!button || animProgress <= 0) return;
     push();
@@ -1126,7 +1126,7 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
             if (mode === 'SURVIVAL') {
                 if (lineData.contains.includes('Goal')) { drawTrophyIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Start')) { drawCoinIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
-                else if (lineData.contains.includes('Bet')) { drawSliderIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;} // Icon tied to 'Bet:' line
+                else if (lineData.contains.includes('Bet')) { drawSliderIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Reward')) { drawUpArrowIcon(iconX, iconY, scaledIconSize, finalTextAlpha, pulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Scoring')) { drawScoringIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
                 else if (lineData.contains.includes('Danger')) { drawClockIcon(iconX, iconY, scaledIconSize, finalTextAlpha, fastPulseAnim); iconDrawn = true;}
@@ -1156,25 +1156,25 @@ function drawHoverDescription(button, description, animProgress, slideDirection 
         // --- Draw Text ---
         fill(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha);
         // <<< Updated highlighting logic >>>
-        if (mode === 'SURVIVAL' && lineText.includes('"bet amount"')) { // Check for the core phrase
-            let keyword = '"bet amount"'; // Highlight only this part
+        if (mode === 'SURVIVAL' && lineText.includes('"bet amount"')) {
+            let keyword = '"bet amount"'; // Only highlight this part
             let startIndex = lineText.indexOf(keyword);
             if (startIndex !== -1) {
                 let prefix = lineText.substring(0, startIndex);
                 let highlighted = lineText.substring(startIndex, startIndex + keyword.length);
-                let suffix = lineText.substring(startIndex + keyword.length); // Includes " slider..." part
+                let suffix = lineText.substring(startIndex + keyword.length); // Includes " slider..."
                 let prefixWidth = textWidth(prefix);
                 let highlightedWidth = textWidth(highlighted);
-                text(prefix, textDrawX, textDrawY);
-                fill(betSliderHighlightColor);
-                text(highlighted, textDrawX + prefixWidth, textDrawY); // Draw highlighted keyword
-                fill(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha);
-                text(suffix, textDrawX + prefixWidth + highlightedWidth, textDrawY); // Draw the rest normally
+                text(prefix, textDrawX, textDrawY); // Draw text before
+                fill(betSliderHighlightColor); // Highlight color
+                text(highlighted, textDrawX + prefixWidth, textDrawY); // Draw highlighted part
+                fill(HOVER_BOX_TEXT_COLOR[0], HOVER_BOX_TEXT_COLOR[1], HOVER_BOX_TEXT_COLOR[2], finalTextAlpha); // Reset color
+                text(suffix, textDrawX + prefixWidth + highlightedWidth, textDrawY); // Draw the rest (including " slider")
             } else {
-                 text(lineText, textDrawX, textDrawY);
+                 text(lineText, textDrawX, textDrawY); // Fallback
             }
         } else {
-            text(lineText, textDrawX, textDrawY);
+            text(lineText, textDrawX, textDrawY); // Default
         }
     }
 
@@ -1784,6 +1784,7 @@ function handlePowerupTimersAndVisuals() {
         drawingContext.shadowBlur = 0;
          if (bonusBallTimer <= 0) {
              bonusBallMessage = '';
+             // Flag is NOT reset here, only when used
          }
     }
 
@@ -1903,7 +1904,7 @@ function resetGame() {
     if (currentGameMode === 'SURVIVAL') {
         score = initialScoreSurvival;
         betAmount = minBetAmount;
-        if (betSlider) { betSlider.value = betAmount; betSlider.enabled = true; }
+        if (betSlider) { betSlider.value = betAmount; betSlider.enabled = true; } // Ensure bet slider is reset and enabled
         if (speedSlider) speedSlider.enabled = false;
         ballsRemaining = Infinity;
         highScorePoints = 0;
@@ -1913,7 +1914,7 @@ function resetGame() {
         score = highScoreStartingGold;
         ballsRemaining = highScoreBallsTotal;
         betAmount = minBetAmount;
-        if (betSlider) { betSlider.value = betAmount; betSlider.enabled = false; }
+        if (betSlider) { betSlider.value = betAmount; betSlider.enabled = false; } // Ensure bet slider is reset and disabled
         if (speedSlider) speedSlider.enabled = true;
         highScorePoints = 0;
         survivalStartTime = 0; lastDecayTime = 0; currentDecayPercent = 0; nextDecayTime = Infinity;
