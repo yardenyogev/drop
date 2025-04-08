@@ -166,7 +166,7 @@ let isDoubleDropActive = false, doubleDropTimer = 0;
 let isDoubleMultiplierActive = false, doubleMultiplierTimer = 0;
 let doubleDropMessage = '', doubleDropMessageTimer = 0;
 let doubleMultiplierMessage = '', doubleMultiplierMessageTimer = 0;
-let showTrails = false; let showAnalyzer = true; let blopSound, bonusSound, backgroundMusic; let sfxVolume = defaultSfxVolume;
+let showTrails = true; let showAnalyzer = true; let blopSound, bonusSound, backgroundMusic; let sfxVolume = defaultSfxVolume;
 let musicVolume = defaultMusicVolume;
 let audioStarted = false;
 let isGameOverConditionMet = false;
